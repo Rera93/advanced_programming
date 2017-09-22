@@ -17,34 +17,30 @@ class Container t where
 instance Container [] where
 	Cinsert x l = [x:l]
 	Ccontains x l = isMember x l
-	Cshow l = []     // Where is the overloading that can't be solved? [toString l]
 	Cnew = []
+	Cshow l = ["[": printEles l ["]"]]
+
+printEles :: [a] [String] -> [String] | toString a
+printEles [] c = c
+printEles [x] c = [toString x : c]
+printEles [x:xs] c = [toString x, ", " : printEles xs c]
 
 instance Container Bin where
-	Cinsert x t = insertBin x t
-	Ccontains x t = containsBin x t
-	Cshow t = showBin t
+	Cinsert x Leaf = Bin Leaf x Leaf
+	Cinsert x (Bin l e r)
+		| x < e = Bin (Cinsert x l) e r
+		        = Bin l e (Cinsert x r)
+	Ccontains x Leaf = False
+	Ccontains x (Bin l e r)
+		| x < e = Ccontains x l
+		| x > e = Ccontains x r
+				= e == x
 	Cnew = Leaf
+	Cshow Leaf = ["Leaf"]
+	Cshow t = ["(": printEles (treeToList t []) [")"]]
+	where
+		treeToList Leaf c = c
+		treeToList (Bin l e r) c = treeToList l [e: treeToList r c]
 
-concat :: [String] -> String
-concat xs = foldl (\e x -> e +++ x) "" xs
-
-insertBin :: a (Bin a) -> Bin a
-insertBin x Leaf = Bin Leaf x Leaf
-insertBin x (Bin l e r) = Bin (insertBin x l) e r
-
-containsBin :: a (Bin a) -> Bool | Eq a
-containsBin _ Leaf = False
-containsBin x (Bin l e r) 
-	| e == x = True
-	= containsBin x l || containsBin x r
-
-showBin :: (Bin a) -> [String] | toString a
-showBin Leaf = ["Leaf"]
-showBin (Bin l e r) = ["(Bin " +++ concat (showBin l) 
-					  +++ " " +++ toString e
-					  +++ " " +++ concat (showBin r) +++ ")"]
-
-
-//Start = Cinsert 5 (Bin (Bin Leaf 4 Leaf) 3 Leaf)
-Start = Cshow (Bin (Bin Leaf 5 Leaf) 4 Leaf)
+//Start = Cshow (Bin (Bin Leaf 4 Leaf) 3 Leaf)
+//Start = Cshow [1,2,3,4,5]

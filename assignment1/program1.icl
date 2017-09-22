@@ -3,7 +3,7 @@
 
 module program1
 
-import StdMaybe, StdString, StdChar, StdTuple, StdBool, StdList, StdOverloaded
+import StdMaybe, StdString, StdChar, StdTuple, StdBool, StdList, StdOverloaded, StdInt
 
 :: Bin a = Leaf | Bin (Bin a) a (Bin a)
 :: Rose a = Rose a [Rose a]
@@ -23,44 +23,41 @@ instance serialize Int where
     read [n:ns] = Just (stringToInt (fromString n), ns)
     read _ = Nothing
 
-// Read for bin, lists and rose is really, really a parser. 
-// Is this necessary? Am I missing something?
+instance serialize [a] | serialize a where
+    write [] s = ["[]" : s]
+    write [x:xs] s = ["(", "Cons" : write x (write xs [")":s])]
+    read ["[]":ss] = Just ([], ss)
+    read ["(", "Cons":x] = 
+        case read x of
+            Just (e, rs) = case read rs of
+                Just (p, [")":t]) = Just ([e:p], t)
+                _ = Nothing
+            _ = Nothing
+    read _ = Nothing
 
 instance serialize (Bin a) | serialize a where
     write Leaf s = ["Leaf" : s]
-    write (Bin x n y) s = [w : s]
-    where
-        w = "(Bin " +++ show x +++ " " +++ show n +++ " " +++ show y +++ ")"
+    write (Bin x n y) s = ["(", "Bin" : write x (write n (write y [")":s]))]
     read ["Leaf":ss] = Just (Leaf, ss)
-    read _ = Nothing        // Missing this
-
-instance serialize [a] | serialize a where
-    write l s = ["[" +++ eles l +++ "]" : s]
-    where
-        eles [] = ""
-        eles [x] = show x
-        eles [x:xs] = show x +++ ", " +++ concat (map eles [xs])
-    read ["[]":ss] = Just ([], ss)
-    read _ = Nothing        // Missing this
+    read ["(", "Cons": x] = 
+        case read x of
+            Just (l, s1) = case read s1 of
+                Just (e, s2) = case read s2 of
+                    Just (r, [")":s3]) = Just (Bin l e r, s3)
+                    _ = Nothing
+                _ = Nothing
+            _ = Nothing
+    read _ = Nothing
 
 instance serialize (Rose a) | serialize a where
-    write (Rose x xs) s = [w : s]
-    where
-        w = "Rose " +++ show x +++ " " +++ show xs
-    read _ = Nothing        // Missing this
-
-concat :: [String] -> String
-concat xs = foldl (\e x -> e +++ x) "" xs
-
-show :: a -> String | serialize a
-show x = hd (write x [])
-
-test :: a -> (Bool,[String]) | serialize, ==a
-test a = (isJust r && fst jr==a && isEmpty (tl (snd jr)), s)
-where
-    s = write a ["λ n"] 
-    r = read s
-    jr = fromJust r
+    write (Rose x xs) s = ["(","Rose": write x (write xs [")":s])]
+    read ["(","Rose":x] = 
+        case read x of
+            Just (a, s1) = case read s1 of
+                Just (as, s2) = Just (Rose a as, s2)
+                _ = Nothing
+            _ = Nothing
+    read _ = Nothing        
 
 stringToInt :: [Char] -> Int
 stringToInt ['-':s] = 0 - (stringToInt s)
@@ -78,22 +75,10 @@ stringToInt s = foldl (\x y -> x*10 + digitToInt y) 0 s
 // Kind of T3: (* -> * -> *) -> * -> * -> *
 // Kind of T4: (* -> *) -> (* -> *) -> * -> *
 
-
-
-
-Start = write [1] []
-
-//Start = [test True, test False ]
-//Start = [test 45, test -67 ]
-
-//Start :: [String]
-//Start = write (Bin (Bin Leaf 6 (Bin Leaf 9 Leaf)) 4 (Bin (Bin Leaf 5 Leaf) 7 Leaf)) []
-
-//Start = write (Rose 1 []) []
-//Start = stringToInt ['45']
-
-//Start :: Int
-//Start = read ["45", "-56"]
-
+Start = case read (write l []) of
+    Just (k,[]) = k == l
+    _ = False
+where
+    l = [1,2,3,4,5,6,7]
 
 
