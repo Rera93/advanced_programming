@@ -103,7 +103,6 @@ Start =
   ,test 0
   ,test 123
   ,test -36
-  ,test [1..]
   ,test [42]
   ,test [0..4]
   ,test [[True],[]]
