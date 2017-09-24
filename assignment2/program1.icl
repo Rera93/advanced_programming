@@ -1,3 +1,29 @@
+// Matheus Amazonas Cabral de Andrade
+// s4605640
+
+/*  Answers to question 1
+
+1.1: Not really, since the type UNIT has only 1 constructor (UNIT).
+If there's only one constructor and the type isn't parametric, comparing
+two elements of that type will always return True. In fact, we could define 
+the instance ignoring the values:
+
+instance == UNIT where
+	(==) _ _ = True
+
+1.2: The CONST type is there to add constructor name, which comes handy when 
+we want to print the data, but it doesn't affect the actual values, hence
+we shouldn't compare the names.
+
+1.3: 
+Leaf != [] (in their generic representation) because they have different
+daya types (the expression doesn't even type checks). The generic reprresentation
+of Leaf has a type of BinG and the generic representation of [] has a type of
+ListG. Besides that, their constructor name (string) doesn't match. In addition,
+ == isn't defined for those data types.
+
+*/
+
 module program1
 
 import StdMaybe, StdString, StdChar, StdEnv
@@ -124,25 +150,3 @@ test a =
     s = write a ["\n"]
     r = read s
     jr = fromJust r
-/*  Answers to question 1
-
-1.1: Not really, since the type UNIT has only 1 constructor (UNIT).
-If there's only one constructor and the type isn't parametric, comparing
-two elements of that type will always return True. In fact, we could define 
-the instance ignoring the values:
-
-instance == UNIT where
-	(==) _ _ = True
-
-1.2: The CONST type is there to add constructor name, which comes handy when 
-we want to print the data, but it doesn't affect the actual values, hence
-we shouldn't compare the names.
-
-1.3: 
-Leaf != [] (in their generic representation) because they have different
-daya types (the expression doesn't even type checks). The generic reprresentation
-of Leaf has a type of BinG and the generic representation of [] has a type of
-ListG. Besides that, their constructor name (string) doesn't match. In addition,
- == isn't defined for those data types.
-
-*/
