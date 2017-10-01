@@ -41,7 +41,6 @@ instance serialize Int where
 instance serialize UNIT where
 	write _ c = c
 	read s = Just (UNIT, s)
-	read _ = Nothing
 
 instance serialize (PAIR a b) | serialize a & serialize b where
 	write (PAIR a b) c = ["(" : write a (write b [")":c])]
@@ -60,7 +59,6 @@ instance serialize (EITHER a b) | serialize a & serialize b where
 		Nothing = case read list of
 			Just (b, m) = Just (RIGHT b, m)
 			_ = Nothing
-	read _ = Nothing
 
 instance serialize (CONS a) | serialize a where
 	write (CONS cons a) c = ["(", cons : write a [")":c]]
