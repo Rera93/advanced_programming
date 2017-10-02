@@ -216,23 +216,23 @@ instance serialize0 Coin where
 	the value (7,True) as ["(","7",",","True",")"]
 */
 
-:: TupleG a b :== PAIR (CONS a) (CONS b)
+:: TupleG a b :== PAIR a b
 
 fromTuple :: (a,b) -> TupleG a b
-fromTuple (a,b) = PAIR (CONS "L" a) (CONS "R" b)
+fromTuple (a,b) = PAIR a b
 
 toTuple :: (TupleG a b) -> (a, b)
-toTuple (PAIR (CONS _ a) (CONS _ b)) = (a, b)
+toTuple (PAIR a b) = (a, b)
 
 instance serialize (a, b) | serialize a & serialize b where
   write t s = write2 write write t s
   read s = read2 read read s
 
 instance serialize2 (,) where
-  write2 wa wb t c = write2 (write1 wa) (write1 wb) (fromTuple t) c
+  write2 wa wb t c = write2 wa wb (fromTuple t) c
   read2 ra rb s = case ra s of
     Just (a, m) = case rb m of
-      Just (b, n) = Just ((a, b), n)
+      Just (b, n) = Just (toTuple (PAIR a b), n)
       _ = Nothing
     _ = Nothing
 
