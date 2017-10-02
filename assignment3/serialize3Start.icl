@@ -279,7 +279,7 @@ test a =
 /* 1.1
 I couldn't figure out how to make 1.1 work. I really, really tried with a new class
 that determines when a given generic representation is a "leaf" representation, but 
-I kept getting some "can't resolve overloading" errors
+I kept getting some "can't resolve overloading" errors. 
 */ 
 
 

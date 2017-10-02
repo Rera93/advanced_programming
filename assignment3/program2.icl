@@ -1,6 +1,14 @@
 // Matheus Amazonas Cabral de Andrade
 // s4605640
 
+/* ---------------- README ----------------
+For some weird reason, running this module throws a segmentation
+fault in my machine. I'm not sure if it's because I downloaded a
+nightly build that might be faulty, or if I did something wrong.
+I don't see how in Clean I might have done something so wrong to
+throw a segmentation fault
+*/
+
 module program2
 
 import StdGeneric, StdMaybe, StdEnv
@@ -70,15 +78,6 @@ read {|Bool|} _ = Nothing
 
 derive write [], Bin, Coin, (,)
 derive read [], Bin, Coin, (,)
-
-
-/* ---------------- README ----------------
-For some weird reason, running this module throws a segmentation
-fault in my machine. I'm not sure if it's because I downloaded a
-nightly build that might be faulty, or if I did something wrong.
-I don't see how in Clean I might have done something so wrong to
-throw a segmentation fault
-*/
 
 Start = 
   [test True
