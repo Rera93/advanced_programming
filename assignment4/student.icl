@@ -69,7 +69,7 @@ write mess = IO w where
 
 // ---- make IO a monad --- //
 
-instance Functor IO where
+instance MyFunctor IO where
 	fmap f (IO g)
 		= IO \s.case g s of
 					(Just a, s) = (Just (f a),s)
@@ -100,7 +100,7 @@ instance OrMonad IO where
 
 // ---- reading a student record --- //
 
-Start w = run f2 w
+Start w = run f3 w
 
 :: Student =
   { fname :: String
@@ -137,7 +137,7 @@ f1 world
 
 f2 :: IO String
 f2 
-	= (        write "Your first name please: "
+	= ( write "Your first name please: "
 	>>| read
 	>>= \fname.write "Your last name please: "
 	>>| read
@@ -146,6 +146,21 @@ f2
 	>>= \snum. rtrn {fname = rmNL fname, lname = rmNL lname, snum = snum}
 	>>= write o toString)
 	<|> write "failed to read a student"
+
+instance MyFunctor [] where
+	fmap _ [] = []
+	fmap f [x:xs] = [f x : fmap f xs]
+
+createStudent :: String String Int -> String 
+createStudent fn ln sn = toString {fname = fn, lname = ln, snum = sn}
+
+double {fname,lname,snum} = {fname = "lalala", lname = "llelele", snum = 0} 
+
+f3 :: IO String
+f3 = IO \s -> case unIO (pure createStudent <*> (write "Your first name please\n" >>| read) 
+						<*> (write "Your last name please\n" >>| read)
+						<*> (write "Your student number please\n" >>| read)) s of
+			(Just student, state) = unIO (write student) state
 
 rmNL :: String -> String
 rmNL string
