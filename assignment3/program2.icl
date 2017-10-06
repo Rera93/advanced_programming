@@ -50,19 +50,30 @@ read {|EITHER|} ra rb s = case ra s of
 		Just (b, n) = Just (RIGHT b, n)
 		_ = Nothing
 
-write {|CONS|} wa (CONS a) s = wa a s
-read {|CONS|} ra s = case ra s of
-	Just (a, m) = Just(CONS a, m)
-	_ = Nothing
+write {|CONS of {gcd_name,gcd_arity}|} wa (CONS a) s 
+  | gcd_arity > 0 = ["(", gcd_name:wa a [")":s]]
+  = [gcd_name:wa a s]
+read {|CONS of {gcd_name,gcd_arity}|} ra ["(",c:s] 
+  | gcd_arity > 0 && c == gcd_name = case ra s of
+    Just (a, [")":m]) = Just(CONS a, m)
+    _ = Nothing
+read {|CONS of {gcd_name,gcd_arity}|} ra [c:s] 
+  | gcd_arity == 0 && c == gcd_name = case ra s of
+	  Just (a, m) = Just(CONS a, m)
+	  _ = Nothing
+read {|CONS|} _ _ = Nothing
 
 write {|OBJECT|} wa (OBJECT a) s = wa a s
 read {|OBJECT|} ra s = case ra s of
-	Just (a, m) = Just (OBJECT a, m)
+  Just (a, m) = Just (OBJECT a, m)
   _ = Nothing
 
+// We don't actually need field because we don't use it. 
+// If we never use it, it's fine not to define. The compiler
+// won't complain unless we use it.
 write {|FIELD|} wa (FIELD f) s = wa f s
 read {|FIELD|} ra s = case ra s of
-	Just (a, m) = Just(FIELD a, m)
+  Just (a, m) = Just(FIELD a, m)
   _ = Nothing
 
 write {|Int|} i s = [toString i:s]
