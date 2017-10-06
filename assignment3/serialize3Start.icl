@@ -114,14 +114,19 @@ instance serialize1 CONS where
     _ = Nothing
   read1 _ _ = Nothing
 
+instance serializeCONS a where
+  writeCons w (CONS cons a) c = ["(":cons:w a [")":c]]
+  readCons c ra ["(":cons:s] 
+    | c == cons = case ra s of
+      Just (a, [")":s]) = Just(CONS cons a, s)
+      _ = Nothing
+      = Nothing
+  readCons _ _ _ = Nothing
+
 instance serializeCONS UNIT where
   writeCons _ (CONS c _) s = [c:s]
   readCons c ra [s:l] 
     | c == s = Just (CONS s UNIT, l)
-  readCons _ _ _ = Nothing
-
-instance serializeCONS a where
-  writeCons _ a s = []
   readCons _ _ _ = Nothing
 
 // ---
@@ -144,8 +149,8 @@ instance serialize [a] | serialize a where
   read l = read1 read l
 
 instance serialize1 [] where
-  write1 w l s = write2 (writeCons write0) (write1 (write2 w (write1 w))) (fromList l) s
-  read1 r s = case read2 (readCons "Nil" read0) (read1 (read2 r (read1 r))) s of
+  write1 w l s = write2 (writeCons write0) (writeCons (write2 w (write1 w))) (fromList l) s
+  read1 r s = case read2 (readCons NilString read0) (readCons ConsString (read2 r (read1 r))) s of
     Just (l, s) = Just (toList l, s)
     _ = Nothing
 
@@ -229,12 +234,13 @@ instance serialize (a, b) | serialize a & serialize b where
   read s = read2 read read s
 
 instance serialize2 (,) where
-  write2 wa wb t c = write2 wa wb (fromTuple t) c
-  read2 ra rb s = case ra s of
-    Just (a, m) = case rb m of
-      Just (b, n) = Just (toTuple (PAIR a b), n)
+  write2 wa wb (a, b) c = ["(":wa a [",":wb b [")":c]]]
+  read2 ra rb ["(":s] = case ra s of
+    Just (a, [",":m]) = case rb m of
+      Just (b, [")":n]) = Just (toTuple (PAIR a b), n)
       _ = Nothing
     _ = Nothing
+  read2 _ _ _ = Nothing
 
 
 // ---

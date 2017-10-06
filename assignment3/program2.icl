@@ -58,10 +58,12 @@ read {|CONS|} ra s = case ra s of
 write {|OBJECT|} wa (OBJECT a) s = wa a s
 read {|OBJECT|} ra s = case ra s of
 	Just (a, m) = Just (OBJECT a, m)
+  _ = Nothing
 
 write {|FIELD|} wa (FIELD f) s = wa f s
 read {|FIELD|} ra s = case ra s of
 	Just (a, m) = Just(FIELD a, m)
+  _ = Nothing
 
 write {|Int|} i s = [toString i:s]
 read {|Int|} [s:r]
