@@ -7,12 +7,12 @@ definition module monad
 
 import StdMisc
 
-class Functor f where
+class MyFunctor f where
 	fmap :: (a->b) (f a) -> (f b)
-	(<$>) infixl 4 :: (a->b) (f a) -> (f b) | Functor f
+	(<$>) infixl 4 :: (a->b) (f a) -> (f b) | MyFunctor f
  	(<$>) f x :== fmap f x
 
-class Applicative f | Functor f where
+class Applicative f | MyFunctor f where
 	pure :: a -> f a
 	(<*>) infixl 4 :: (f (a->b)) (f a) -> f b
 

@@ -18,7 +18,7 @@ import StdEnv, StdMaybe, monad
 unS :: (State s a) -> s -> (Maybe a,s)
 unS (S f) = f
 
-instance Functor (State s) where
+instance MyFunctor (State s) where
 	fmap f s = fail
 instance Applicative (State s) where
 	pure a = fail
