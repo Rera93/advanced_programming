@@ -32,10 +32,10 @@ instance OrMonad (State s) where
 
 // ---
 
-:: Serialized = Serialized
+:: Serialized = Serialized [String] [String]
 
 ser :: Serialized
-ser = Serialized
+ser = Serialized [] []
 
 toStrings :: Serialized -> [String]
 toStrings _ = ["to be done\n"]
@@ -43,16 +43,26 @@ toStrings _ = ["to be done\n"]
 :: Serialize a :== State Serialized a
 
 wrt :: a -> Serialize String | toString a
-wrt a = fail
+wrt a = S \(Serialized is os) -> (Nothing, (Serialized is [toString a:os]))
 
 rd :: Serialize String
-rd = fail
+rd = S \(Serialized is os) = case is of
+  [] = (Nothing, Serialized is os)
+  [i:is] = (Just i, Serialized is os)
 
 match :: a -> Serialize a | toString a
-match a = fail
+match a = S \(Serialized is os) -> case is of
+  [] = (Nothing, Serialized is os)
+  [i:is] 
+    | i == toString a = (Just a, Serialized is os)
+    = (Nothing, Serialized [i:is] os)
 
 pred :: (String->Bool) -> Serialize String
-pred f = fail
+pred f = S \(Serialized is os) -> case is of
+  [] = (Nothing, Serialized is os)
+  [i:is] 
+    | f i = (Just i, Serialized is os)
+    = (Nothing, Serialized [i:is] os)
 
 // ---
 
