@@ -1,3 +1,6 @@
+// Matheus Amazonas Cabral de Andrade
+// s4605640
+
 module serialize4
 
 import StdEnv, StdMaybe, monad
@@ -19,16 +22,26 @@ unS :: (State s a) -> s -> (Maybe a,s)
 unS (S f) = f
 
 instance MyFunctor (State s) where
-	fmap f s = fail
+  fmap f (S s) = S \t -> case s t of
+    (Just a, s) = (Just (f a), s) 
+    (_, s) = (Nothing, s)
 instance Applicative (State s) where
-	pure a = fail
-	(<*>) f x = fail
-instance fail (State s) where
-	fail = S \s.(Nothing,s)
+  pure a = S \s -> (Just a, s)
+  (<*>) (S f) (S x) = S \s -> case f s of
+    (Just f, s) = case x s of
+      (Just y, s) = (Just (f y), s)
+      (_, s) = (Nothing, s)
+    (_, s) = (Nothing, s)
+instance fail (State s) where 
+  fail = S \s.(Nothing,s)
 instance Monad (State s) where
-	bind a f = fail
+  bind (S a) f = S \s -> case a s of
+    (Just a, s) = unS (f a) s
+    (_, s) = (Nothing, s)
 instance OrMonad (State s) where
-	(<|>) f g = fail
+  (<|>) (S f) (S g) = S \s -> case f s of
+    (Nothing, _) = g s
+    _            = f s
 
 // ---
 
@@ -38,12 +51,12 @@ ser :: Serialized
 ser = Serialized [] []
 
 toStrings :: Serialized -> [String]
-toStrings _ = ["to be done\n"]
+toStrings (Serialized _ os) = os
 
 :: Serialize a :== State Serialized a
 
 wrt :: a -> Serialize String | toString a
-wrt a = S \(Serialized is os) -> (Nothing, (Serialized is [toString a:os]))
+wrt a = S \(Serialized is os) -> (Just (toString a), (Serialized [toString a: is] (os++[toString a])))
 
 rd :: Serialize String
 rd = S \(Serialized is os) = case is of
@@ -51,18 +64,10 @@ rd = S \(Serialized is os) = case is of
   [i:is] = (Just i, Serialized is os)
 
 match :: a -> Serialize a | toString a
-match a = S \(Serialized is os) -> case is of
-  [] = (Nothing, Serialized is os)
-  [i:is] 
-    | i == toString a = (Just a, Serialized is os)
-    = (Nothing, Serialized [i:is] os)
+match a = rd >>= \s -> guard(toString a == s) >>| pure a <|> fail
 
 pred :: (String->Bool) -> Serialize String
-pred f = S \(Serialized is os) -> case is of
-  [] = (Nothing, Serialized is os)
-  [i:is] 
-    | f i = (Just i, Serialized is os)
-    = (Nothing, Serialized [i:is] os)
+pred p = read >>= \s -> guard(p s)
 
 // ---
 
@@ -95,36 +100,53 @@ instance isUNIT UNIT where isUNIT _ = True
 instance isUNIT a    where isUNIT _ = False
 
 instance serialize Bool where
-  write b = fail
-  read = fail
+  write b = wrt (toString b)
+  read = match True <|> match False
+
+
+readInt [s:r]
+    # i = toInt s
+    | s == toString i
+      = Just (i,r)
+      = Nothing
+readInt _ = Nothing
 
 instance serialize Int where
-	write i = fail
+	write i = wrt (toString i)
 	read = fail
 
 instance serialize String where
 	write s = wrt s
-	read = fail
+	read = rd
 
 instance serialize UNIT where
-	write _ = fail
-	read = fail
+	write _ = wrt ""
+	read = rd >>| pure UNIT
 
 instance serializeCONS UNIT where
-	writeCons wa (CONS name a) = fail
-	readCons name ra = fail
+  writeCons wa (CONS name a) = wrt name >>| wa a
+  readCons name ra = (fail)
  
 instance serializeCONS a where
-	writeCons wa (CONS name a) = fail
-	readCons name ra =fail
+  writeCons wa (CONS name a) = wrt "("
+    >>| wrt name
+    >>| wa a
+    >>| wrt ")"
+  readCons name ra = fail
+/*
+  readCons name ra = match "("
+    >>| rd 
+    >>= \name -> ra >>= \a -> 
+    >>| match ")"
+    >>| pure (CONS name a)*/
  
 instance serialize2 EITHER where
-  write2 wa wb (LEFT  a) = fail
-  write2 wa wb (RIGHT b) = fail
+  write2 wa wb (LEFT  a) = wa a
+  write2 wa wb (RIGHT b) = wb b
   read2 ra rb = fail
 
 instance serialize2 PAIR where
-  write2 wa wb (PAIR a b) = fail
+  write2 wa wb (PAIR a b) = wa a >>| wb b
   read2 ra rb = fail
 
 // ---
@@ -237,6 +259,6 @@ test a = toStrings (snd ((unS t) ser)) where
  	=   write a
 	>>| read
 	>>= \b. guard (a == b)
-	>>| write "Oke "
-	<|> write "Failure "
+	>>| write "Oke"
+	<|> write "Failure"
 

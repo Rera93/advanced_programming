@@ -1,3 +1,6 @@
+// Matheus Amazonas Cabral de Andrade
+// s4605640
+
 module student
 
 import StdEnv, StdMaybe, monad
@@ -153,8 +156,6 @@ instance MyFunctor [] where
 
 createStudent :: String String Int -> String 
 createStudent fn ln sn = toString {fname = fn, lname = ln, snum = sn}
-
-double {fname,lname,snum} = {fname = "lalala", lname = "llelele", snum = 0} 
 
 f3 :: IO String
 f3 = IO \s -> case unIO (pure createStudent <*> (write "Your first name please\n" >>| read) 
