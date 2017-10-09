@@ -43,6 +43,20 @@ instance OrMonad (State s) where
     (Nothing, _) = g s
     _            = f s
 
+instance MyFunctor [] where
+  fmap f l = map f l
+instance Applicative [] where
+  pure a = [a]
+  (<*>) fs xs = [f x \\ f <- fs, x <- xs]
+instance fail [] where
+  fail = []
+instance Monad [] where
+  bind xs f = [y \\ x <- xs, y <- f x]
+instance OrMonad [] where
+  (<|>) [] y = y
+  (<|>) x y = x
+
+
 // ---
 
 :: Serialized = Serialized [String] [String]
@@ -59,15 +73,15 @@ wrt :: a -> Serialize String | toString a
 wrt a = S \(Serialized is os) -> (Just (toString a), (Serialized [toString a: is] (os++[toString a])))
 
 rd :: Serialize String
-rd = S \(Serialized is os) = case is of
+rd = S \(Serialized is os) = case os of
   [] = (Nothing, Serialized is os)
-  [i:is] = (Just i, Serialized is os)
+  [o:os] = (Just o, Serialized (init is) os)
 
 match :: a -> Serialize a | toString a
-match a = rd >>= \s -> guard(toString a == s) >>| pure a <|> fail
+match a = rd >>= \s -> guard(toString a == s) >>| pure a 
 
 pred :: (String->Bool) -> Serialize String
-pred p = read >>= \s -> guard(p s)
+pred p = rd >>= \s -> guard(p s)
 
 // ---
 
@@ -103,51 +117,54 @@ instance serialize Bool where
   write b = wrt (toString b)
   read = match True <|> match False
 
-
-readInt [s:r]
+readInt :: String -> Maybe Int
+readInt s
     # i = toInt s
     | s == toString i
-      = Just (i,r)
+      = Just i
       = Nothing
-readInt _ = Nothing
 
 instance serialize Int where
-	write i = wrt (toString i)
-	read = fail
+  write i = wrt (toString i)
+  read = rd
+    >>= \s -> pure (readInt s)
+    >>= \i -> case i of
+      Just x -> pure x
+      _ -> fail
 
 instance serialize String where
 	write s = wrt s
 	read = rd
 
 instance serialize UNIT where
-	write _ = wrt ""
-	read = rd >>| pure UNIT
+	write _ = pure ""
+	read = pure UNIT
 
 instance serializeCONS UNIT where
   writeCons wa (CONS name a) = wrt name >>| wa a
-  readCons name ra = (fail)
+  readCons name ra = match name 
+    >>| ra 
+    >>= \a -> pure (CONS name a)
  
 instance serializeCONS a where
   writeCons wa (CONS name a) = wrt "("
     >>| wrt name
     >>| wa a
     >>| wrt ")"
-  readCons name ra = fail
-/*
   readCons name ra = match "("
-    >>| rd 
-    >>= \name -> ra >>= \a -> 
-    >>| match ")"
-    >>| pure (CONS name a)*/
- 
+    >>| rd
+    >>= \name -> ra 
+    >>= \a -> match ")"
+    >>| pure (CONS name a)
+
 instance serialize2 EITHER where
   write2 wa wb (LEFT  a) = wa a
   write2 wa wb (RIGHT b) = wb b
-  read2 ra rb = fail
+  read2 ra rb = ra >>= \a -> pure (LEFT a) <|> rb >>= \b -> pure (RIGHT b)
 
 instance serialize2 PAIR where
   write2 wa wb (PAIR a b) = wa a >>| wb b
-  read2 ra rb = fail
+  read2 ra rb = ra >>= \a -> rb >>= \b -> pure (PAIR a b)
 
 // ---
 
@@ -166,11 +183,17 @@ ConsString :== "Cons"
 
 instance serialize [a] | serialize a where
  write a = write1 write a
- read    = read1  read
+ read    = read1 read
 
 instance serialize1 [] where
-	write1 writea l = fail
-	read1  reada = fail
+  write1 _ [] = wrt NilString
+  write1 writea [a:as] = wrt ConsString >>| writea a >>| write1 writea as
+  read1  reada = pred (\s -> s == NilString)
+    >>| pure []
+    <|> pred (\s -> s == ConsString)
+    >>| reada 
+    >>= \x -> read1 reada
+    >>= \xs -> pure [x:xs]
 // ---
 
 :: Bin a = Leaf | Bin (Bin a) a (Bin a)
@@ -194,12 +217,20 @@ instance == (Bin a) | == a where
   (==) _ _ = False
 
 instance serialize (Bin a) | serialize a where
-	write b = fail
-	read = fail
+  write b = write1 write b
+  read = read1 read
 
 instance serialize1 Bin where
-	write1 writea b = fail
-	read1  reada    = fail
+  write1 wa Leaf = wrt LeafString
+  write1 wa (Bin l a r) = wrt BinString >>| write1 wa l >>| wa a >>| write1 wa r
+  read1 ra = pred (\s -> s == LeafString) 
+    >>| pure Leaf
+    <|> pred (\s -> s == BinString) 
+    >>| read1 ra 
+    >>= \l -> ra 
+    >>= \a -> read1 ra
+    >>= \r -> pure (Bin l a r)
+  //read1  reada = match Leaf 
 // ---
 
 :: Coin = Head | Tail
@@ -218,15 +249,23 @@ instance == Coin where
   (==) Tail Tail = True
   (==) _    _    = False
 
+HeadString :== "Head"
+TailString :== "Tail"
+
 instance serialize Coin where
-	write c = fail
-	read    = fail
+  write Head = wrt HeadString
+  write Tail = wrt TailString
+  read = match Head <|> match Tail
+
+instance toString Coin where
+  toString Head = HeadString
+  toString Tail = TailString
 
 // ---
 
 instance serialize (a,b) | serialize a & serialize b where
-	write (a,b) = fail
-	read = fail
+	write (a,b) = write a >>| write b
+	read = read >>= \a -> read >>= \b -> pure (a,b)
 
 // ---
 
@@ -253,7 +292,7 @@ Start =
   ,["End of the tests.\n"]
   ]
 
-test :: a -> [String] | serialize, == a
+//test :: a -> [String] | serialize, == a
 test a = toStrings (snd ((unS t) ser)) where
  t
  	=   write a
