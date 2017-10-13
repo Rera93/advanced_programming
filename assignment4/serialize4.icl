@@ -33,7 +33,7 @@ instance Applicative (State s) where
       (_, s) = (Nothing, s)
     (_, s) = (Nothing, s)
 instance fail (State s) where 
-  fail = S \s.(Nothing,s)
+  fail = S \s -> (Nothing,s)
 instance Monad (State s) where
   bind (S a) f = S \s -> case a s of
     (Just a, s) = unS (f a) s
@@ -41,7 +41,7 @@ instance Monad (State s) where
 instance OrMonad (State s) where
   (<|>) (S f) (S g) = S \s -> case f s of
     (Nothing, _) = g s
-    _            = f s
+    other        = other
 
 instance MyFunctor [] where
   fmap f l = map f l
@@ -70,18 +70,21 @@ toStrings (Serialized _ os) = os
 :: Serialize a :== State Serialized a
 
 wrt :: a -> Serialize String | toString a
+wrt a = S \(Serialized is os) -> (Just (toString a), Serialized is [toString a : os])
 wrt a = S \(Serialized is os) -> (Just (toString a), (Serialized [toString a: is] (os++[toString a])))
 
 rd :: Serialize String
-rd = S \(Serialized is os) = case os of
-  [] = (Nothing, Serialized is os)
-  [o:os] = (Just o, Serialized (init is) os)
+rd = S \(Serialized is os) -> case is of
+  [] -> case os of
+    [] -> (Nothing, Serialized is os)
+    l -> unS rd (Serialized (reverse l) [])
+  [x:xs] -> (Just x, Serialized xs os)
 
 match :: a -> Serialize a | toString a
-match a = rd >>= \s -> guard(toString a == s) >>| pure a 
+match a = rd >>= \s -> guard(toString a == s) >>| pure a
 
 pred :: (String->Bool) -> Serialize String
-pred p = rd >>= \s -> guard(p s)
+pred p = rd >>= \s -> guard (p s) >>| pure s
 
 // ---
 
@@ -114,7 +117,7 @@ instance isUNIT UNIT where isUNIT _ = True
 instance isUNIT a    where isUNIT _ = False
 
 instance serialize Bool where
-  write b = wrt (toString b)
+  write b = wrt b
   read = match True <|> match False
 
 readInt :: String -> Maybe Int
@@ -125,7 +128,7 @@ readInt s
       = Nothing
 
 instance serialize Int where
-  write i = wrt (toString i)
+  write i = wrt i
   read = rd
     >>= \s -> pure (readInt s)
     >>= \i -> case i of
@@ -141,10 +144,8 @@ instance serialize UNIT where
 	read = pure UNIT
 
 instance serializeCONS UNIT where
-  writeCons wa (CONS name a) = wrt name >>| wa a
-  readCons name ra = match name 
-    >>| ra 
-    >>= \a -> pure (CONS name a)
+  writeCons wa (CONS name a) = wrt name 
+  readCons name _ = CONS <$> match name <*> pure UNIT
  
 instance serializeCONS a where
   writeCons wa (CONS name a) = wrt "("
@@ -160,11 +161,11 @@ instance serializeCONS a where
 instance serialize2 EITHER where
   write2 wa wb (LEFT  a) = wa a
   write2 wa wb (RIGHT b) = wb b
-  read2 ra rb = ra >>= \a -> pure (LEFT a) <|> rb >>= \b -> pure (RIGHT b)
+  read2 ra rb = LEFT <$> ra <|> RIGHT <$> rb
 
 instance serialize2 PAIR where
   write2 wa wb (PAIR a b) = wa a >>| wb b
-  read2 ra rb = ra >>= \a -> rb >>= \b -> pure (PAIR a b)
+  read2 ra rb = PAIR <$> ra <*> rb
 
 // ---
 
