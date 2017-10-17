@@ -30,7 +30,7 @@ login = enterInformation "Enter a username" []
 
 // ------ User home functions ------
 
-teacherHome :: String (Shared [Question]) -> Task [Question]
+teacherHome :: UserName (Shared [Question]) -> Task [Question]
 teacherHome u s = viewInformation ("Hello, teacher " +++ u) [] ""
 	||- enterChoiceWithShared "Choose an item do edit" [ChooseFromGrid id] s 
 	>>* [OnAction (Action "Append") (hasValue (append s)),
@@ -41,14 +41,14 @@ teacherHome u s = viewInformation ("Hello, teacher " +++ u) [] ""
 		 OnAction (Action "Quit") (always login)]
 	>>= \_ -> teacherHome u s
 
-adminHome :: String (Shared [Question]) -> Task [Question]
+adminHome :: UserName (Shared [Question]) -> Task [Question]
 adminHome u s = viewInformation ("Hello, admin " +++ u) [] "" 
 	||- updateSharedInformation "Edit the questions" [] s
 
 // I fetch the list of questions and then display them. 
 // I don't call xxxWithShared for each question. I don't
 // know how to do that. Lenses, maybe?
-studentHome :: String (Shared [Question]) -> Task [Question]
+studentHome :: UserName (Shared [Question]) -> Task [Question]
 studentHome u s = get s 
 	>>= \qs -> sequence "student_answers" (map displayQuestion qs)
 	>>= \results -> (viewInformation "Correct answers:" [] (count results)
