@@ -73,10 +73,10 @@ isAdmin n = n == "admin"
 // ------- Teacher functions -------
 
 append :: (Shared [Question]) Question -> Task [Question]
-append s q = get s >>= \qs -> set (appendList q qs) s
+append s q = upd (\qs -> appendList q qs) s
 
 del :: (Shared [Question]) Question -> Task [Question]
-del s q = get s >>= \qs -> set (delete q qs) s
+del s q = upd (\qs -> delete q qs) s
 
 edit :: String (Shared [Question]) Question -> Task [Question]
 edit u s q = updateInformation "Edit Question" [] q
@@ -87,12 +87,12 @@ edit u s q = updateInformation "Edit Question" [] q
 			>>= \_ -> teacherHome u s
 
 first :: (Shared [Question]) -> Task [Question]
-first s = get s >>= \qs -> set [nq:qs] s
+first s = upd (\qs -> [nq:qs]) s
 	where 
 		nq = { question = "", choices = [], answer = 0}
 
 replace :: Question (Shared [Question]) Question -> Task [Question]
-replace oq s nq = get s >>= \qs -> set (replaceList oq qs nq) s
+replace oq s nq = upd (\qs -> replaceList oq qs nq) s
 
 // --- List helper functions ---
 
