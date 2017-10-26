@@ -59,20 +59,6 @@ MainModule
 		Fusion:	False
 OtherModules
 	Module
-		Name:	AUser
-		Dir:	{Project}
-		Compiler
-			NeverMemoryProfile:	False
-			NeverTimeProfile:	False
-			StrictnessAnalysis:	True
-			ListTypes:	StrictExportTypes
-			ListAttributes:	True
-			Warnings:	True
-			Verbose:	True
-			ReadableABC:	False
-			ReuseUniqueNodes:	True
-			Fusion:	False
-	Module
 		Name:	Appointment
 		Dir:	{Project}
 		Compiler
