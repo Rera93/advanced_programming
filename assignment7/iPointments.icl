@@ -10,10 +10,16 @@ home :: [Workflow]
 home = [transientWorkflow "Show Appointments" "Show all the future appointments" (showAppointments appointments),
 		transientWorkflow "Make Appointment" "Make a new appointment" (makeAppointment appointments),
 		transientWorkflow "Propose Appointment" "Propose a new appointment" (makeAppointment appointments),
-		restrictedTransientWorkflow "Manage users" "Manage system users" ["admin"] manageUsers]
+		restrictedTransientWorkflow "Manage users" "Manage system users" ["admin"] manageUsersSafe]
 	where 
 		appointments = sharedStore "appointments" defaultValue
 
+manageUsersSafe :: Task ()
+manageUsersSafe = try manageUsers catchUserError 
+	>>* [OnAction ActionOk (always manageUsersSafe)]
+where
+	catchUserError :: String -> Task ()
+	catchUserError s = manageUsersSafe -|| viewInformation ("Error: " +++ s) [] () 
 
 showAppointments :: (Shared [Appointment]) -> Task [Appointment]
 showAppointments s = updateSharedInformation "Future appointments" [] s
