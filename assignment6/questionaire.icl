@@ -72,10 +72,10 @@ isAdmin n = n == "admin"
 		
 // ------- Teacher functions -------
 
-append :: (Shared [Question]) Question -> Task [Question]
+append :: (Shared [a]) a -> Task [a] | iTask, == a
 append s q = upd (\qs -> appendList q qs) s
 
-del :: (Shared [Question]) Question -> Task [Question]
+del :: (Shared [a]) a -> Task [a] | iTask , == a
 del s q = upd (\qs -> delete q qs) s
 
 edit :: String (Shared [Question]) Question -> Task [Question]
@@ -86,22 +86,23 @@ edit u s q = updateInformation "Edit Question" [] q
 		add nq = replace q s nq
 			>>= \_ -> teacherHome u s
 
-first :: (Shared [Question]) -> Task [Question]
-first s = upd (\qs -> [nq:qs]) s
+first :: (Shared [a]) -> Task [a] | iTask a
+first s = upd (\qs -> [defaultValue:qs]) s
 	where 
 		nq = { question = "", choices = [], answer = 0}
 
-replace :: Question (Shared [Question]) Question -> Task [Question]
+replace :: a (Shared [a]) a -> Task [a] | iTask, == a
 replace oq s nq = upd (\qs -> replaceList oq qs nq) s
 
 // --- List helper functions ---
 
-appendList :: Question [Question] -> [Question]
+appendList :: a [a] -> [a] | iTask, == a
 appendList _ [] = []
 appendList q [x:xs]
 	| q == x = [x,defaultValue:xs]
 	= [x:appendList q xs]
-replaceList :: Question [Question] Question -> [Question]
+
+replaceList :: a [a] a -> [a] | == a
 replaceList _ [] _ = []
 replaceList oq [x:xs] nq 
 	| x == oq = [nq:xs]
