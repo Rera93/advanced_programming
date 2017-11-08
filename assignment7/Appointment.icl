@@ -2,4 +2,4 @@ implementation module Appointment
 
 import iTasks
 
-derive class iTask Appointment
+derive class iTask Appointment, Proposal

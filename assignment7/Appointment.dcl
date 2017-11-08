@@ -6,9 +6,16 @@ from iTasks.Extensions.Admin.UserAdmin import :: UserAccount
 
 :: Appointment = {	
 	title :: String,
-	when :: DateTime,
+	start :: DateTime,
 	duration :: Time,
 	owner :: User,
 	participants :: [User]}
 
-derive class iTask Appointment
+:: Proposal = {
+	ptitle :: String,
+	pstarts :: [(DateTime, [User])],
+	pduration :: Time,
+	powner :: User,
+	pparticipants :: [User]}
+
+derive class iTask Appointment, Proposal
