@@ -15,6 +15,6 @@ from iTasks.Extensions.DateTime import :: DateTime, :: Time
 
 derive class iTask Appointment
 
-appointments :: Shared [Appointment]
 makeAppointment :: Task [Appointment]
 showAppointments :: Task [Appointment]
+createAppointment :: Appointment -> Task [Appointment]

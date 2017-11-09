@@ -6,6 +6,7 @@ implementation module Appointment
 import iTasks
 import Util
 from Data.Func import $
+from Data.List import find
 
 derive class iTask Appointment
 
@@ -13,25 +14,25 @@ appointments :: Shared [Appointment]
 appointments = sharedStore "appointments" []
 
 // I see 2 problems with using the -&&- here
-// First, the web layout is awful, with each field taking too much vertical space
-// Second, the result is a nested tuple, which isn't the best solution ever
+// First, the web layout is not pleasing to look at, with each field taking 
+// too much vertical space. Second, the result is a nested tuple, which isn't 
+// the best solution ever. I wish there was a way of currying that.
 makeAppointment :: Task [Appointment]
-makeAppointment = forever $ get currentDateTime
+makeAppointment = get currentUser
+		>>= \u -> forever $ get currentDateTime
 		>>= \curDT -> enterInformation "Title" [] 
 		-&&- updateInformation "Start" [] curDT	
 		-&&- updateInformation "Duration" [] defaultDuration
+		-&&- viewInformation "Owner" [ViewAs toString] u
 		-&&- selectUsers 
-		>>* [OnAction (Action "Make") (hasValue createAppointment),
+		>>* [OnAction (Action "Make") (hasValue createAppointmentTup),
 			 OnAction ActionCancel (always (return defaultValue))]	// TODO: Check what to do here
 	where
-		createAppointment :: (String, (DateTime, (Time, [User]))) -> Task [Appointment]
-		createAppointment (t,(s,(d,par))) = get currentUser 
-				>>= \u -> upd (\as -> as ++ [na u]) appointments
-				>>| assignToMany (viewAppointment (na u)) par 
-			where
-				na o = { title = t, start = s, duration = d, owner = o, participants = par}
-				viewAppointment a = viewInformation "Appointment" [] a
+		createAppointmentTup :: (String, (DateTime, (Time, (User, [User])))) -> Task [Appointment]
+		createAppointmentTup (t,(s,(d,(o,par)))) = createAppointment { title = t, start = s, duration = d, owner = o, participants = par}
+
+createAppointment :: Appointment -> Task [Appointment]
+createAppointment a = upd (\as -> as ++ [a]) appointments
 
 showAppointments :: Task [Appointment]
 showAppointments = updateSharedInformation ("Future appointments", "Choose an appointment to view") [] appointments
-
