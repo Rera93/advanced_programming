@@ -18,5 +18,5 @@ derive class iTask Proposal
 instance == Proposal
 
 showProposals :: Task [Proposal]
-fillProposal :: Proposal -> Task Proposal
+fillProposal :: Proposal -> Task [Proposal]
 makeProposal :: Task [Proposal]

@@ -69,8 +69,8 @@ editProposal p = fetchProposal p
 				deleteProposal i = upd (removeFromList (\p -> p.pid == i)) proposals
 
 
-fillProposal :: Proposal -> Task Proposal
-fillProposal p = forever $ get currentUser
+fillProposal :: Proposal -> Task [Proposal]
+fillProposal p = get currentUser
 		>>= \u -> viewInformation "Title" [] p.ptitle
 		||- (enterMultipleChoice "Choose available start times" [ChooseFromCheckGroup id] (map fst p.pstarts)
 		-|| viewInformation "Duration" [] p.pduration
@@ -78,10 +78,8 @@ fillProposal p = forever $ get currentUser
 		-|| viewInformation "Participants" [] (map toString p.pparticipants))
 		>>* [OnAction ActionOk (hasValue (updateProposal u p))]
 	where
-		updateProposal :: User Proposal [DateTime] -> Task Proposal
+		updateProposal :: User Proposal [DateTime] -> Task [Proposal]
 		updateProposal u p sts = upd (\ps -> map (updateStarts u p sts) ps) proposals 
-				>>| viewInformation "The proposal was updated" [] "Press \"Continue\" to edit it again"
-				>>* [OnAction ActionOk (always (return p))]
 			where 
 				updateStarts :: User Proposal [DateTime] Proposal -> Proposal
 				updateStarts u np sts op 
