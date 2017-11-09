@@ -19,7 +19,7 @@ proposals :: Shared [Proposal]
 proposals = sharedStore "proposals" []
 
 showProposals :: Task [Proposal]
-showProposals = viewSharedInformation ("Open proposals", "Choose a proposal to view") [] proposals
+showProposals = viewSharedInformation ("Open proposals") [] proposals
 
 makeProposal :: Task [Proposal]
 makeProposal = get currentUser

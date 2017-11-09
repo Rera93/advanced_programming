@@ -5,6 +5,7 @@ implementation module Appointment
 
 import iTasks
 import Util
+from iTasks.Extensions.DateTime import instance < DateTime
 from Data.Func import $
 from Data.List import find
 
@@ -39,4 +40,5 @@ createAppointment a = getNextId
 		>>= \i -> let na = { a & aid = i} in upd (\as -> as ++ [a]) appointments
 
 showAppointments :: Task [Appointment]
-showAppointments = updateSharedInformation ("Future appointments", "Choose an appointment to view") [] appointments
+showAppointments = get currentDateTime
+		>>= \now -> viewSharedInformation ("Future appointments") [ViewAs (filter (\a -> a.start > now))] appointments
