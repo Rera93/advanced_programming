@@ -5,7 +5,7 @@ implementation module Appointment
 
 import iTasks
 import Util
-from iTasks.Extensions.DateTime import instance < DateTime
+import iTasks.Extensions.DateTime
 from Data.Func import $
 from Data.List import find
 
