@@ -2,9 +2,8 @@ module iPointments
 
 import Appointment
 import iTasks.Extensions.DateTime 
-import Util
-import StdDebug
 from Data.Func import $
+from Data.List import replaceInList, find
 
 defaultDuration :: Time
 defaultDuration = {Time| defaultValue & hour = 1}
@@ -14,6 +13,7 @@ Start w = startEngine (loginAndManageWorkList "Welcome to iPointments" home) w
 
 home :: [Workflow]
 home = [transientWorkflow "Show Appointments" "Show all the future appointments" showAppointments,
+		transientWorkflow "Show Proposals" "Show all open proposals" showProposals,
 		transientWorkflow "Make Appointment" "Make a new appointment" makeAppointment,
 		transientWorkflow "Propose Appointment" "Propose a new appointment" proposeAppointment,
 		restrictedTransientWorkflow "Manage users" "Manage system users" ["admin"] manageUsersSafely]
@@ -36,6 +36,9 @@ selectUsers = get users >>= \us -> enterMultipleChoice "Select Participants" [Ch
 
 showAppointments :: Task [Appointment]
 showAppointments = updateSharedInformation ("Future appointments", "Choose an appointment to view") [] appointments
+
+showProposals :: Task [Proposal]
+showProposals = viewSharedInformation ("Open proposals", "Choose a proposal to view") [] proposals
 
 // I see 2 problems with using the -&&- here
 // First, the web layout is awful, with each field taking too much vertical space
@@ -61,15 +64,28 @@ assignToMany :: (Task a) [User] -> Task [a] | iTask a
 assignToMany t us = allTasks (map (\u -> u @: t) us) 
 		>>* [OnAction ActionOk (always (return defaultValue))]
 
-viewProposal :: Proposal -> Task Proposal
-viewProposal p = viewInformation "Title" [] p.ptitle
+fillProposal :: Proposal -> Task Proposal
+fillProposal p = get currentUser
+		>>= \u -> viewInformation "Title" [] p.ptitle
 		||- (enterMultipleChoice "Choose available start times" [ChooseFromCheckGroup id] (map fst p.pstarts)
 		-|| viewInformation "Duration" [] p.pduration
 		-|| viewInformation "Owner" [] (toString p.powner)
 		-|| viewInformation "Participants" [] (map toString p.pparticipants))
-		>>* [OnValue (hasValue addUserAvail)]
+		>>* [OnAction ActionOk (hasValue (updateProposal u p))]
 	where
-		addUserAvail sts = return defaultValue //TODO: Implement proposal 
+		updateProposal :: User Proposal [DateTime] -> Task Proposal
+		updateProposal u p sts = upd (\ps -> map (updateStarts u p sts) ps) proposals >>| return p
+			where 
+				updateStarts :: User Proposal [DateTime] Proposal -> Proposal
+				updateStarts u np sts op 
+					| sameProposal np op = {op & pstarts = addStarts op.pstarts sts u}
+					| otherwise = op
+					where
+						addStarts :: [(DateTime, [User])] [DateTime] User -> [(DateTime, [User])]
+						addStarts sts ts u = [let users = if (d1 == d2) [u:us] us in (d2, users) \\ (d2,us) <- sts, d1 <- ts]
+						sameProposal :: Proposal Proposal -> Bool
+						sameProposal p1 p2 = gEq{|*|} {p1 & pstarts = []} {p2 & pstarts = []}
+
 
 proposeAppointment :: Task [Proposal]
 proposeAppointment = forever $ enterInformation "Title" []
@@ -82,7 +98,7 @@ proposeAppointment = forever $ enterInformation "Title" []
 		createProposal :: (String, ([DateTime], (Time, [User]))) -> Task [Proposal]
 		createProposal (t,(ss,(d,par))) = get currentUser 
 				>>= \u -> upd (\ps -> ps ++ [np u]) proposals
-				>>| assignToMany (viewProposal (np u)) par
+				>>| assignToMany (fillProposal (np u)) par
 			where
 				np u = { ptitle = t, pstarts = map (\s -> (s,[])) ss, pduration = d, powner = u, pparticipants = par}
 
