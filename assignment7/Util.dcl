@@ -9,3 +9,4 @@ from iTasks.Extensions.DateTime import :: Time
 selectUsers :: Task [User]
 assignToMany :: (Task a) [User] -> Task [a] | iTask a
 defaultDuration :: Time
+addUnique :: a [a] -> [a] | gEq{|*|} a

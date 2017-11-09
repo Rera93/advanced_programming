@@ -4,6 +4,7 @@
 implementation module Proposal
 
 import iTasks
+import Appointment
 import Util
 import iTasks.Extensions.DateTime 
 from Data.Func import $
@@ -17,6 +18,25 @@ proposals = sharedStore "proposals" []
 showProposals :: Task [Proposal]
 showProposals = viewSharedInformation ("Open proposals", "Choose a proposal to view") [] proposals
 
+makeProposal :: Task [Proposal]
+makeProposal = get currentUser
+		>>= \u -> forever $ enterInformation "Title" []
+		-&&- updateInformation "Suggested Start Times" [] []
+		-&&- updateInformation "Duration" [] defaultDuration
+		-&&- viewInformation "Owner" [ViewAs toString] u
+		-&&- selectUsers
+		>>* [OnAction (Action "Create") (hasValue createProposal),
+			 OnAction ActionCancel (always (return defaultValue))] // TODO: Check what to do here
+	where 
+		createProposal :: (String, ([DateTime], (Time, (User, [User])))) -> Task [Proposal]
+		createProposal (t,(ss,(d,(o,par)))) 
+			# starts = map (\dt -> (dt, [])) ss
+			# np = { ptitle = t, pstarts = starts, pduration = d, powner = o, pparticipants = par}
+			= upd (\ps -> ps ++ [np]) proposals
+				>>| assignToMany (fillProposal (np)) par
+				>>* [OnValue (always (o @: editProposal (np)))] 
+editProposal :: Proposal -> Task [Proposal]
+editProposal p = viewInformation "Edit Proposal" [] []
 fillProposal :: Proposal -> Task Proposal
 fillProposal p = forever $ get currentUser
 		>>= \u -> viewInformation "Title" [] p.ptitle
@@ -38,26 +58,7 @@ fillProposal p = forever $ get currentUser
 					where
 						addStarts :: [(DateTime, [User])] [DateTime] User -> [(DateTime, [User])]
 						addStarts sts ts u = [let users = if (d1 == d2) (addUnique u us) us in (d2, users) \\ (d2,us) <- sts, d1 <- ts]
-						addUnique :: a [a] -> [a] | gEq{|*|} a
-						addUnique a [] = [a]
-						addUnique a [x:xs]
-							| gEq {|*|} a x = [x:xs]
-							| otherwise = [x:addUnique a xs]
 						sameProposal :: Proposal Proposal -> Bool
 						sameProposal p1 p2 = gEq{|*|} {p1 & pstarts = []} {p2 & pstarts = []}
 
-makeProposal :: Task [Proposal]
-makeProposal = forever $ enterInformation "Title" []
-		-&&- updateInformation "Suggested Start Times" [] []
-		-&&- updateInformation "Duration" [] defaultDuration
-		-&&- selectUsers
-		>>* [OnAction (Action "Create") (hasValue createProposal),
-			 OnAction ActionCancel (always (return defaultValue))] // TODO: Check what to do here
-	where 
-		createProposal :: (String, ([DateTime], (Time, [User]))) -> Task [Proposal]
-		createProposal (t,(ss,(d,par))) = get currentUser 
-				>>= \u -> upd (\ps -> ps ++ [np u]) proposals
-				>>| assignToMany (fillProposal (np u)) par
-			where
-				np u = { ptitle = t, pstarts = map (\s -> (s,[])) ss, pduration = d, powner = u, pparticipants = par}
 

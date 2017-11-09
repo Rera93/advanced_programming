@@ -15,3 +15,9 @@ assignToMany t us = allTasks (map (\u -> u @: t) us)
 
 defaultDuration :: Time
 defaultDuration = {Time| defaultValue & hour = 1}
+
+addUnique :: a [a] -> [a] | gEq{|*|} a
+addUnique a [] = [a]
+addUnique a [x:xs]
+	| gEq {|*|} a x = [x:xs]
+	| otherwise = [x:addUnique a xs]
