@@ -29,3 +29,9 @@ getNextId :: Task Int
 getNextId = get nextId >>* [OnValue (hasValue giveId)]
 	where
 		giveId i = upd inc nextId >>| return i  
+
+removeFromList :: (a -> Bool) [a] -> [a]
+removeFromList p [] = []
+removeFromList p [x:xs] 
+	| p x = removeFromList p xs
+	| otherwise = [x:removeFromList p xs]

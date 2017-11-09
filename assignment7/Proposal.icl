@@ -23,8 +23,7 @@ showProposals = viewSharedInformation ("Open proposals", "Choose a proposal to v
 
 makeProposal :: Task [Proposal]
 makeProposal = get currentUser
-		>>= \u -> forever $ getNextId
-		-&&- enterInformation "Title" []
+		>>= \u -> forever $ enterInformation "Title" []
 		-&&- updateInformation "Suggested Start Times" [] []
 		-&&- updateInformation "Duration" [] defaultDuration
 		-&&- viewInformation "Owner" [ViewAs toString] u
@@ -32,16 +31,43 @@ makeProposal = get currentUser
 		>>* [OnAction (Action "Create") (hasValue createProposal),
 			 OnAction ActionCancel (always (return defaultValue))] // TODO: Check what to do here
 	where 
-		createProposal :: (Int,(String, ([DateTime], (Time, (User, [User]))))) -> Task [Proposal]
-		createProposal (i,(t,(ss,(d,(o,par)))))
+		createProposal :: (String, ([DateTime], (Time, (User, [User])))) -> Task [Proposal]
+		createProposal (t,(ss,(d,(o,par))))
 			# starts = map (\dt -> (dt, [])) ss
-			# np = { pid = i, ptitle = t, pstarts = starts, pduration = d, powner = o, pparticipants = par}
-			= upd (\ps -> ps ++ [np]) proposals
+			# np = { pid = 0, ptitle = t, pstarts = starts, pduration = d, powner = o, pparticipants = par}
+			= 	getNextId
+				>>= \i -> upd (\ps -> ps ++ [{np & pid = i}]) proposals
 				>>| assignToMany (fillProposal (np)) par
 				>>* [OnValue (always (o @: editProposal (np)))] 
 
+fetchProposal :: Proposal -> Task (Maybe Proposal)
+fetchProposal p = get proposals
+		>>* [OnValue (hasValue (findProposal p))]
+	where
+		findProposal p ps = return $ find ((==) p) ps
+
 editProposal :: Proposal -> Task [Proposal]
-editProposal p = viewInformation "Edit Proposal" [] []
+editProposal p = fetchProposal p
+		>>= \mp -> case mp of
+			Just np -> edit np
+			_ -> viewInformation "Couldn't fetch the proposal" [] []
+	where
+		edit :: Proposal -> Task [Proposal]
+		edit p = viewInformation "ID" [] p.pid
+				-&&- viewInformation "Title" [] p.ptitle
+				-&&- enterChoice "Available start times and users" [ChooseFromCheckGroup id] p.pstarts
+				-&&- viewInformation "Duration" [] p.pduration
+				-&&- viewInformation "Owner" [] p.powner
+				-&&- viewInformation "Participants" [] p.pparticipants
+				>>* [OnAction (Action "Create Appointment") (hasValue turnIntoApp),
+					 OnAction (Action "Cancel Proposal") (hasValue (deleteProposal o fst))]
+			where
+				turnIntoApp (_,(t,(s,(d,(o,par)))))
+					# na = { aid = 0, title = t, start = fst s, duration = d, owner = o, participants = par}
+					 = createAppointment na >>| viewInformation "Appointment created" [] []
+				deleteProposal :: Int -> Task [Proposal]
+				deleteProposal i = upd (removeFromList (\p -> p.pid == i)) proposals
+
 
 fillProposal :: Proposal -> Task Proposal
 fillProposal p = forever $ get currentUser

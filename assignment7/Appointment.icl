@@ -23,8 +23,7 @@ appointments = sharedStore "appointments" []
 makeAppointment :: Task [Appointment]
 makeAppointment = get currentUser
 		>>= \u -> forever $ get currentDateTime
-		>>= \curDT -> getNextId
-		-&&- enterInformation "Title" [] 
+		>>= \curDT -> enterInformation "Title" [] 
 		-&&- updateInformation "Start" [] curDT	
 		-&&- updateInformation "Duration" [] defaultDuration
 		-&&- viewInformation "Owner" [ViewAs toString] u
@@ -32,11 +31,12 @@ makeAppointment = get currentUser
 		>>* [OnAction (Action "Make") (hasValue createAppointmentTup),
 			 OnAction ActionCancel (always (return defaultValue))]	// TODO: Check what to do here
 	where
-		createAppointmentTup :: (Int, (String, (DateTime, (Time, (User, [User]))))) -> Task [Appointment]
-		createAppointmentTup (i,(t,(s,(d,(o,par))))) = createAppointment { aid = i,title = t, start = s, duration = d, owner = o, participants = par}
+		createAppointmentTup :: (String, (DateTime, (Time, (User, [User])))) -> Task [Appointment]
+		createAppointmentTup (t,(s,(d,(o,par)))) = createAppointment { aid = 0, title = t, start = s, duration = d, owner = o, participants = par}
 
 createAppointment :: Appointment -> Task [Appointment]
-createAppointment a = upd (\as -> as ++ [a]) appointments
+createAppointment a = getNextId 
+		>>= \i -> let na = { a & aid = i} in upd (\as -> as ++ [a]) appointments
 
 showAppointments :: Task [Appointment]
 showAppointments = updateSharedInformation ("Future appointments", "Choose an appointment to view") [] appointments

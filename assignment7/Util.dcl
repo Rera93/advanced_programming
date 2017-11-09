@@ -11,3 +11,4 @@ assignToMany :: (Task a) [User] -> Task [a] | iTask a
 defaultDuration :: Time
 addUnique :: a [a] -> [a] | gEq{|*|} a
 getNextId :: Task Int
+removeFromList :: (a -> Bool) [a] -> [a]
