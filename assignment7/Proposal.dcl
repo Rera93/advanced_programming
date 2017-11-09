@@ -7,6 +7,7 @@ import iTasks
 from iTasks.Extensions.DateTime import :: DateTime, :: Time
 
 :: Proposal = {
+	pid :: Int,
 	ptitle :: String,
 	pstarts :: [(DateTime, [User])],
 	pduration :: Time,
@@ -14,6 +15,7 @@ from iTasks.Extensions.DateTime import :: DateTime, :: Time
 	pparticipants :: [User]}
 
 derive class iTask Proposal
+instance == Proposal
 
 showProposals :: Task [Proposal]
 fillProposal :: Proposal -> Task Proposal

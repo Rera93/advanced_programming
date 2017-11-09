@@ -7,6 +7,7 @@ import iTasks
 from iTasks.Extensions.DateTime import :: DateTime, :: Time
 
 :: Appointment = {	
+	aid :: Int,
 	title :: String,
 	start :: DateTime,
 	duration :: Time,
@@ -14,6 +15,7 @@ from iTasks.Extensions.DateTime import :: DateTime, :: Time
 	participants :: [User]}
 
 derive class iTask Appointment
+instance == Appointment
 
 makeAppointment :: Task [Appointment]
 showAppointments :: Task [Appointment]

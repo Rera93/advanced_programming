@@ -12,6 +12,9 @@ from Data.List import replaceInList, find
 
 derive class iTask Proposal
 
+instance == Proposal where
+	(==) x y = x.pid == y.pid
+
 proposals :: Shared [Proposal]
 proposals = sharedStore "proposals" []
 
@@ -20,7 +23,8 @@ showProposals = viewSharedInformation ("Open proposals", "Choose a proposal to v
 
 makeProposal :: Task [Proposal]
 makeProposal = get currentUser
-		>>= \u -> forever $ enterInformation "Title" []
+		>>= \u -> forever $ getNextId
+		-&&- enterInformation "Title" []
 		-&&- updateInformation "Suggested Start Times" [] []
 		-&&- updateInformation "Duration" [] defaultDuration
 		-&&- viewInformation "Owner" [ViewAs toString] u
@@ -28,15 +32,17 @@ makeProposal = get currentUser
 		>>* [OnAction (Action "Create") (hasValue createProposal),
 			 OnAction ActionCancel (always (return defaultValue))] // TODO: Check what to do here
 	where 
-		createProposal :: (String, ([DateTime], (Time, (User, [User])))) -> Task [Proposal]
-		createProposal (t,(ss,(d,(o,par)))) 
+		createProposal :: (Int,(String, ([DateTime], (Time, (User, [User]))))) -> Task [Proposal]
+		createProposal (i,(t,(ss,(d,(o,par)))))
 			# starts = map (\dt -> (dt, [])) ss
-			# np = { ptitle = t, pstarts = starts, pduration = d, powner = o, pparticipants = par}
+			# np = { pid = i, ptitle = t, pstarts = starts, pduration = d, powner = o, pparticipants = par}
 			= upd (\ps -> ps ++ [np]) proposals
 				>>| assignToMany (fillProposal (np)) par
 				>>* [OnValue (always (o @: editProposal (np)))] 
+
 editProposal :: Proposal -> Task [Proposal]
 editProposal p = viewInformation "Edit Proposal" [] []
+
 fillProposal :: Proposal -> Task Proposal
 fillProposal p = forever $ get currentUser
 		>>= \u -> viewInformation "Title" [] p.ptitle
