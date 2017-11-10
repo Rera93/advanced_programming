@@ -60,7 +60,7 @@ editProposal p = fetchProposal p
 				-&&- viewInformation "Owner" [] p.powner
 				-&&- viewInformation "Participants" [ViewAs (map toString)] p.pparticipants
 				>>* [OnAction (Action "Create Appointment") (hasValue turnIntoApp),
-					 OnAction (Action "Cancel Proposal") (hasValue (deleteProposal o fst))]
+					 OnAction (Action "Cancel Proposal") (always (deleteProposal p.pid))]
 			where
 				turnIntoApp (i,(t,(s,(d,(o,par)))))
 					# na = { aid = 0, title = t, start = fst s, duration = d, owner = o, participants = par}
