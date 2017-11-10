@@ -28,7 +28,7 @@ makeProposal = get currentUser
 		-&&- updateInformation "Duration" [] defaultDuration
 		-&&- viewInformation "Owner" [ViewAs toString] u
 		-&&- selectUsers
-		>>* [OnAction (Action "Create") (hasValue createProposal),
+		>>* [OnAction (Action "Create") (ifValue (not o isEmpty o fst o snd) createProposal),
 			 OnAction ActionCancel (always (return defaultValue))] // TODO: Check what to do here. Ask when submitting
 	where 
 		createProposal :: (String, ([DateTime], (Time, (User, [User])))) -> Task [Proposal]
