@@ -26,9 +26,7 @@ nextId :: Shared Int
 nextId = sharedStore "next_id" 0
 
 getNextId :: Task Int
-getNextId = get nextId >>* [OnValue (hasValue giveId)]
-	where
-		giveId i = upd inc nextId >>| return i  
+getNextId = upd inc nextId
 
 removeFromList :: (a -> Bool) [a] -> [a]
 removeFromList p [] = []
