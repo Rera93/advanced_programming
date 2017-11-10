@@ -37,7 +37,7 @@ makeAppointment = get currentUser
 
 createAppointment :: Appointment -> Task [Appointment]
 createAppointment a = getNextId 
-		>>= \i -> let na = { a & aid = i} in upd (\as -> as ++ [a]) appointments
+		>>= \i -> let na = { a & aid = i} in upd (\as -> as ++ [na]) appointments
 
 showAppointments :: Task [Appointment]
 showAppointments = get currentDateTime

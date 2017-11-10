@@ -29,16 +29,16 @@ makeProposal = get currentUser
 		-&&- viewInformation "Owner" [ViewAs toString] u
 		-&&- selectUsers
 		>>* [OnAction (Action "Create") (hasValue createProposal),
-			 OnAction ActionCancel (always (return defaultValue))] // TODO: Check what to do here
+			 OnAction ActionCancel (always (return defaultValue))] // TODO: Check what to do here. Ask when submitting
 	where 
 		createProposal :: (String, ([DateTime], (Time, (User, [User])))) -> Task [Proposal]
-		createProposal (t,(ss,(d,(o,par))))
-			# starts = map (\dt -> (dt, [])) ss
-			# np = { pid = 0, ptitle = t, pstarts = starts, pduration = d, powner = o, pparticipants = par}
-			= 	getNextId
-				>>= \i -> upd (\ps -> ps ++ [{np & pid = i}]) proposals
-				>>| assignToMany (fillProposal (np)) par
-				>>* [OnValue (always (o @: editProposal (np)))] 
+		createProposal (t,(ss,(d,(o,par)))) = getNextId
+				>>= \i -> upd (\ps -> ps ++ [np i]) proposals
+				>>| assignToMany (fillProposal (np i)) par
+				>>* [OnValue (always (o @: editProposal (np i)))] 
+			where
+				starts = map (\dt -> (dt, [])) ss
+				np i =  { pid = i, ptitle = t, pstarts = starts, pduration = d, powner = o, pparticipants = par}
 
 fetchProposal :: Proposal -> Task (Maybe Proposal)
 fetchProposal p = get proposals
@@ -58,16 +58,16 @@ editProposal p = fetchProposal p
 				-&&- enterChoice "Available start times and users" [ChooseFromCheckGroup id] p.pstarts
 				-&&- viewInformation "Duration" [] p.pduration
 				-&&- viewInformation "Owner" [] p.powner
-				-&&- viewInformation "Participants" [] p.pparticipants
+				-&&- viewInformation "Participants" [ViewAs (map toString)] p.pparticipants
 				>>* [OnAction (Action "Create Appointment") (hasValue turnIntoApp),
 					 OnAction (Action "Cancel Proposal") (hasValue (deleteProposal o fst))]
 			where
-				turnIntoApp (_,(t,(s,(d,(o,par)))))
+				turnIntoApp (i,(t,(s,(d,(o,par)))))
 					# na = { aid = 0, title = t, start = fst s, duration = d, owner = o, participants = par}
-					 = createAppointment na >>| viewInformation "Appointment created" [] []
+					 = createAppointment na 
+					   >>* [OnValue (always (deleteProposal i))]
 				deleteProposal :: Int -> Task [Proposal]
-				deleteProposal i = upd (removeFromList (\p -> p.pid == i)) proposals
-
+				deleteProposal i = upd (removeFromList (\p -> i == p.pid)) proposals
 
 fillProposal :: Proposal -> Task [Proposal]
 fillProposal p = get currentUser
@@ -83,12 +83,10 @@ fillProposal p = get currentUser
 			where 
 				updateStarts :: User Proposal [DateTime] Proposal -> Proposal
 				updateStarts u np sts op 
-					| sameProposal np op = {op & pstarts = addStarts op.pstarts sts u}
+					| np == op = {op & pstarts = addStarts op.pstarts sts u}
 					| otherwise = op
 					where
 						addStarts :: [(DateTime, [User])] [DateTime] User -> [(DateTime, [User])]
 						addStarts sts ts u = [let users = if (d1 == d2) (addUnique u us) us in (d2, users) \\ (d2,us) <- sts, d1 <- ts]
-						sameProposal :: Proposal Proposal -> Bool
-						sameProposal p1 p2 = gEq{|*|} {p1 & pstarts = []} {p2 & pstarts = []}
 
 
