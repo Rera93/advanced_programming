@@ -38,6 +38,10 @@ makeAppointment = get currentUser
 createAppointment :: Appointment -> Task [Appointment]
 createAppointment a = getNextId 
 		>>= \i -> let na = { a & aid = i} in upd (\as -> as ++ [na]) appointments
+		>>* [OnValue (always (assign na))]
+	where
+		assign a = assignToMany (viewAppointment a) a.participants
+
 viewAppointment :: Appointment -> Task Appointment
 viewAppointment a = fetchFromShared appointments a
 		>>= \ma -> case ma of
