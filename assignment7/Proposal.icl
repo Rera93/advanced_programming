@@ -8,7 +8,7 @@ import Appointment
 import Util
 import iTasks.Extensions.DateTime 
 from Data.Func import $
-from Data.List import replaceInList, find
+from Data.List import replaceInList
 
 derive class iTask Proposal
 
@@ -40,14 +40,8 @@ makeProposal = get currentUser
 				starts = map (\dt -> (dt, [])) ss
 				np i =  { pid = i, ptitle = t, pstarts = starts, pduration = d, powner = o, pparticipants = par}
 
-fetchProposal :: Proposal -> Task (Maybe Proposal)
-fetchProposal p = get proposals
-		>>* [OnValue (hasValue (findProposal p))]
-	where
-		findProposal p ps = return $ find ((==) p) ps
-
 editProposal :: Proposal -> Task [Proposal]
-editProposal p = fetchProposal p
+editProposal p = fetchFromShared proposals p
 		>>= \mp -> case mp of
 			Just np -> edit np
 			_ -> viewInformation "Couldn't fetch the proposal" [] []

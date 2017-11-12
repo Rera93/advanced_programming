@@ -5,6 +5,9 @@ implementation module Util
 
 import iTasks
 import iTasks.Extensions.DateTime 
+from Data.Func import $
+from Data.List import find
+
 
 selectUsers :: Task [User]
 selectUsers = get users >>= \us -> enterMultipleChoice "Select Participants" [ChooseFromCheckGroup id] us
@@ -33,3 +36,10 @@ removeFromList p [] = []
 removeFromList p [x:xs] 
 	| p x = removeFromList p xs
 	| otherwise = [x:removeFromList p xs]
+
+fetchFromShared :: (Shared [a]) a -> Task (Maybe a) | iTask, == a
+fetchFromShared sh a = get sh
+		>>* [OnValue (hasValue (findA a))]
+	where
+		findA :: a [a] -> Task (Maybe a) | iTask, == a
+		findA a as = return $ find ((==) a) as

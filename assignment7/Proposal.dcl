@@ -17,6 +17,5 @@ from iTasks.Extensions.DateTime import :: DateTime, :: Time
 derive class iTask Proposal
 instance == Proposal
 
-showProposals :: Task [Proposal]
-fillProposal :: Proposal -> Task [Proposal]
+//showProposals :: Task [Proposal]
 makeProposal :: Task [Proposal]

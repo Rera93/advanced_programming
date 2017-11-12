@@ -12,3 +12,4 @@ defaultDuration :: Time
 addUnique :: a [a] -> [a] | gEq{|*|} a
 getNextId :: Task Int
 removeFromList :: (a -> Bool) [a] -> [a]
+fetchFromShared :: (Shared [a]) a -> Task (Maybe a) | iTask, == a
