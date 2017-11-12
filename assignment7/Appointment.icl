@@ -38,6 +38,12 @@ makeAppointment = get currentUser
 createAppointment :: Appointment -> Task [Appointment]
 createAppointment a = getNextId 
 		>>= \i -> let na = { a & aid = i} in upd (\as -> as ++ [na]) appointments
+viewAppointment :: Appointment -> Task Appointment
+viewAppointment a = fetchFromShared appointments a
+		>>= \ma -> case ma of
+			Just na -> viewInformation "Appointment" [] na 
+					>>* [OnAction (Action "Done") (hasValue return)]
+			_ -> viewInformation "Couldn't fetch the appointment" [] "" >>| return defaultValue
 
 showAppointments :: Task [Appointment]
 showAppointments = get currentDateTime
