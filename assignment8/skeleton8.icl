@@ -16,7 +16,7 @@ import qualified iTasks
 import qualified iTasks.WF.Combinators.Overloaded as WF
 import Data.Functor, Control.Applicative, Control.Monad
 import Data.Tuple, StdClass, StdList, StdMaybe, StdString
-import StdGeneric, StdBool
+import StdGeneric, StdBool, Data.Either
 from StdFunc import o
 from Data.Func import $
 import qualified Data.List as List
@@ -56,26 +56,28 @@ import qualified Data.Map as Map
 
 :: Val = IntVal Int | SetVal [Int]
 :: State :== 'Map'.Map String Val
-:: Sem a = S (State -> (a, State))
+:: Sem a = S (State -> Either String (a, State))
 :: Sema a :== State -> (a, State)
 
-unS :: (Sem a) -> State -> (a, State)
+unS :: (Sem a) -> State -> Either String (a, State)
 unS (S s) = s
 
 instance Functor Sem where
-  fmap f (S e) = S $ \s -> let (v,s) = e s in (f v, s)
+  fmap f (S e) = S $ \s -> case e s of
+          (Right (v,s)) -> Right (f v, s)
+          (Left e) -> Left e
 
 instance Applicative Sem where
-  pure x = S $ \s -> (x, s)
-  (<*>) (S fs) (S ss) = S f
-    where
-      f s 
-        # (f, s) = fs s
-          (v, s) = ss s
-        = (f v, s)
+  pure x = S $ \s -> Right (x, s)
+  (<*>) (S fs) (S ss) = S $ \s -> case fs s of
+          (Right (f,s)) -> case ss s of
+            (Right (v,s)) -> Right (f v, s)
+            (Left e) -> Left e
+          (Left e) -> Left e
 
 instance Monad Sem where
-  bind (S x) f = S $ \s -> let (v, s) = x s in (unS (f v) s)
+  bind (S x) f = S $ \s -> case x s of
+            (Right (v, s)) -> unS (f v) s
 
 // === semantics
 
