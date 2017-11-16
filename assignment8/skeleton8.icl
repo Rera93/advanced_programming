@@ -75,6 +75,17 @@ instance Monad Sem where
   bind (S x) f = S $ \s -> case x s of
             (Right (v, s)) -> unS (f v) s
 
+store :: Ident Val -> Sem Val
+store i v = S $ \s -> Right (v, 'Map'.put i v s)
+
+read :: Ident -> Sem Val
+read i = S $ \s -> case 'Map'.get i s of
+  Just v -> Right (v, s)
+  Nothing -> Left ("Variable not found: " +++ i)
+
+fail :: String -> Sem a
+fail s = S $ \_ -> Left s
+
 // === semantics
 
 
