@@ -16,8 +16,9 @@ import qualified iTasks
 import qualified iTasks.WF.Combinators.Overloaded as WF
 import Data.Functor, Control.Applicative, Control.Monad
 import Data.Tuple, StdClass, StdList, StdMaybe, StdString
-import StdGenericStdGeneric, StdBool
+import StdGeneric, StdBool
 from StdFunc import o
+from Data.Func import $
 import qualified Data.List as List
 import qualified Data.Map as Map
 
@@ -53,6 +54,28 @@ import qualified Data.Map as Map
 
 // === State
 
+:: Val = IntVal Int | SetVal [Int]
+:: State :== 'Map'.Map String Val
+:: Sem a = S (State -> (a, State))
+:: Sema a :== State -> (a, State)
+
+unS :: (Sem a) -> State -> (a, State)
+unS (S s) = s
+
+instance Functor Sem where
+  fmap f (S e) = S $ \s -> let (v,s) = e s in (f v, s)
+
+instance Applicative Sem where
+  pure x = S $ \s -> (x, s)
+  (<*>) (S fs) (S ss) = S f
+    where
+      f s 
+        # (f, s) = fs s
+          (v, s) = ss s
+        = (f v, s)
+
+instance Monad Sem where
+  bind (S x) f = S $ \s -> let (v, s) = x s in (unS (f v) s)
 
 // === semantics
 
