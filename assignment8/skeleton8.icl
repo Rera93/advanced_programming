@@ -21,8 +21,8 @@ from StdFunc import o
 import qualified Data.List as List
 import qualified Data.Map as Map
 
-:: Expression
-  = New      [Int]
+:: Expression = 
+    New      [Int]
   | Elem     Int
   | Variable Ident
   | Size     Set
@@ -31,8 +31,8 @@ import qualified Data.Map as Map
   | (*.) infixl 7 Expression Expression
   | (=.) infixl 2 Ident Expression
 
-:: Logical
-  = TRUE | FALSE
+:: Logical = 
+    TRUE | FALSE
   | (In) infix 4 Elem Set
   | (==.) infix 4 Expression Expression
   | (<=.) infix 4 Expression Expression
@@ -40,11 +40,12 @@ import qualified Data.Map as Map
   | (||.) infixr 2 Logical Logical
   | (&&.) infixr 3 Logical Logical
 
-:: Stmt
-  = If Logical Stmt Stmt
-  | For Ident Set Stmt
-  | Expression Expression
-  | Logical Logical
+:: Stmt = 
+      Logical Logical
+    | If Logical Stmt Stmt
+    | For Ident Set Stmt
+    | Expression Expression
+
 
 :: Set    :== Expression
 :: Elem  :== Expression
