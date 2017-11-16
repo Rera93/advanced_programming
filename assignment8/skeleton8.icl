@@ -63,17 +63,13 @@ unS :: (Sem a) -> State -> Either String (a, State)
 unS (S s) = s
 
 instance Functor Sem where
-  fmap f (S e) = S $ \s -> case e s of
-          (Right (v,s)) -> Right (f v, s)
-          (Left e) -> Left e
+  fmap f e = liftM f e
 
 instance Applicative Sem where
-  pure x = S $ \s -> Right (x, s)
-  (<*>) (S fs) (S ss) = S $ \s -> case fs s of
-          (Right (f,s)) -> case ss s of
-            (Right (v,s)) -> Right (f v, s)
-            (Left e) -> Left e
-          (Left e) -> Left e
+  pure x = S $ \s -> Right(x, s)
+  (<*>) fs ss = fs >>= 
+      \f -> ss >>= 
+      \s -> pure (f s)
 
 instance Monad Sem where
   bind (S x) f = S $ \s -> case x s of
