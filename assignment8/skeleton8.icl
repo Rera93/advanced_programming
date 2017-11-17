@@ -14,15 +14,18 @@ from iTasks import class iTask, class toPrompt, class Publishable, instance Publ
 	-||-, -||, ||-, >>*, always, hasValue, updateInformation, viewInformation, startEngine
 import qualified iTasks
 import qualified iTasks.WF.Combinators.Overloaded as WF
+import Data.Maybe
 import Data.Functor, Control.Applicative, Control.Monad
-import Data.Tuple, StdClass, StdList, StdMaybe, StdString
+import Data.Tuple, StdClass, StdList, StdString
 import StdGeneric, StdBool, Data.Either
 from StdFunc import o, flip
 from Data.Func import $
 from StdOrdList import sort
 from StdOverloaded import class <
+from StdTuple import snd
 import qualified Data.List as List
 import qualified Data.Map as Map
+import StdEnum
 
 :: Expression = 
     New      [Int]
@@ -163,6 +166,27 @@ evalL (l1 ||. l2) = evalL l1    // Sorry, McCarthy. I haven't been lazy, I'll ke
 evalL (l1 &&. l2) = evalL l1    // Again, sorry, McCarthy
   >>= \v1 -> evalL l2
   >>= \v2 -> pure $ v1 && v2
+
+:: StmtVal = Exp Val | Log Bool
+
+evalS :: Stmt -> Sem StmtVal
+evalS (Logical l) = evalL l
+  >>= \v -> pure $ Log v
+evalS (Expression e) = eval e
+  >>= \v -> pure $ Exp  v
+evalS (If l s1 s2) = evalL l
+  >>= \v -> if v (evalS s1) (evalS s2)
+evalS (For i set stmt) = eval set
+  >>= \values -> case values of
+    (SetVal set) -> forEach i set stmt
+    (IntVal v) -> forEach i [0..v] stmt
+  where
+    forEach :: Ident [Int] Stmt -> Sem StmtVal
+    forEach i set stmt = foldr seqStmt (pure (Log True)) (map (exec stmt i) set)
+    seqStmt :: (Sem StmtVal) (Sem StmtVal) -> Sem StmtVal
+    seqStmt (S f) (S g) = S $ \x -> f x >>= \(_,s) -> g s   // We don't care about the value, just change the state
+    exec :: Stmt Ident Int -> Sem StmtVal
+    exec stmt i v = store i (IntVal v) >>= \_ -> evalS stmt
 
 // === simulation
 (>>>=)     :== 'iTasks'.tbind
