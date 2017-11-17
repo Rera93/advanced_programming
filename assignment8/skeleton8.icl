@@ -136,6 +136,8 @@ eval (e1 *. e2) = eval e1
       (SetVal s1) -> case v2 of
         (SetVal s2) -> semVal $ 'List'.intersect s1 s2
         _ -> fail "Oerator *. can't be used for Set,Int"
+eval (i =. e) = eval e
+  >>= \v -> store i v
 
 evalL :: Logical -> Sem Bool
 evalL TRUE = pure True
