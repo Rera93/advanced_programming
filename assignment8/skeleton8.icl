@@ -17,7 +17,7 @@ import qualified iTasks.WF.Combinators.Overloaded as WF
 import Data.Functor, Control.Applicative, Control.Monad
 import Data.Tuple, StdClass, StdList, StdMaybe, StdString
 import StdGeneric, StdBool, Data.Either
-from StdFunc import o
+from StdFunc import o, flip
 from Data.Func import $
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -57,7 +57,6 @@ import qualified Data.Map as Map
 :: Val = IntVal Int | SetVal [Int]
 :: State :== 'Map'.Map String Val
 :: Sem a = S (State -> Either String (a, State))
-:: Sema a :== State -> (a, State)
 
 unS :: (Sem a) -> State -> Either String (a, State)
 unS (S s) = s
@@ -74,6 +73,7 @@ instance Applicative Sem where
 instance Monad Sem where
   bind (S x) f = S $ \s -> case x s of
             (Right (v, s)) -> unS (f v) s
+            (Left e) -> (Left e)
 
 store :: Ident Val -> Sem Val
 store i v = S $ \s -> Right (v, 'Map'.put i v s)
@@ -87,6 +87,45 @@ fail :: String -> Sem a
 fail s = S $ \_ -> Left s
 
 // === semantics
+
+toList :: Val -> [Int]
+toList (IntVal v) = [v]
+toList (SetVal s) = s
+
+semVal :: [Int] -> Sem Val
+semVal l = pure $ SetVal l
+
+eval :: Expression -> Sem Val
+eval (New set) = pure (SetVal set)
+eval (Elem e) = pure (IntVal e)
+eval (Variable v) = read v
+eval (Size set) = eval set
+  >>= \v -> case v of
+    (SetVal set) = pure (IntVal (length set))
+    (IntVal _) = fail "Can't find the size of an integer"
+eval (e1 +. e2) = eval e1 
+    >>= \v1 -> eval e2 
+    >>= \v2 -> case v1 of
+      (IntVal i1) -> case v2 of
+          (IntVal i2) -> pure $ IntVal $ i1 + i2
+          (SetVal s) -> semVal $ s ++ [i1]
+      (SetVal s) -> semVal $ s ++ (toList v2)
+eval (e1 -. e2) = eval e1
+    >>= \v1 -> eval e2      // Not lazy
+    >>= \v2 -> case v1 of
+      (SetVal s1) -> semVal $ [x \\ x <- s1 | not $ isMember x (toList v2)] 
+      (IntVal i1) -> case v2 of
+        (IntVal i2) -> pure $ IntVal $ i1 + i2
+        _ -> fail "Operator -. can't be used for Int,Set"
+eval (e1 *. e2) = eval e1
+    >>= \v1 -> eval e2      // Not lazy
+    >>= \v2 -> case v1 of
+      (IntVal i1) -> case v2 of
+        (IntVal i2) -> pure $ IntVal $ i1 * i2
+        (SetVal s) -> semVal $ map ((*)i1) s
+      (SetVal s1) -> case v2 of
+        (SetVal s2) -> semVal $ [x \\ x <- s1 | isMember x s2]
+        _ -> fail "Oerator *. can't be used for Set,Int"
 
 
 // === simulation
