@@ -137,43 +137,30 @@ eval (e1 *. e2) = eval e1
         (SetVal s2) -> semVal $ 'List'.intersect s1 s2
         _ -> fail "Oerator *. can't be used for Set,Int"
 
-instance == Logical where
-  (==) TRUE TRUE = True
-  (==) FALSE FALSE = True
-  (==) _ _ = False 
-
-toBool :: Logical -> Bool
-toBool TRUE = True
-toBool FALSE = False
-
-logVal :: Bool -> Sem Logical
-logVal True = pure $ TRUE
-logVal False = pure $ FALSE
-
-evalL :: Logical -> Sem Logical
-evalL TRUE = pure TRUE
-evalL FALSE = pure FALSE
+evalL :: Logical -> Sem Bool
+evalL TRUE = pure True
+evalL FALSE = pure False
 evalL (ee In se) = eval ee
   >>= \e -> eval se 
   >>= \s -> case e of
     (IntVal e) -> case s of
-      (SetVal s) -> logVal $ isMember e s
+      (SetVal s) -> pure $ isMember e s
       _ -> fail "Operator In can't be used for Int,Int"
     _ -> fail "Operator In can't be used for Set,Set"
 evalL (l1 ==. l2) = eval l1
   >>= \v1 -> eval l2
-  >>= \v2 -> logVal $ v1 == v2
+  >>= \v2 -> pure $ v1 == v2
 evalL (e1 <=. e2) = eval e1
   >>= \v1 -> eval e2
-  >>= \v2 -> logVal $ v1 == v2
+  >>= \v2 -> pure $ v1 == v2
 evalL (Not l) = evalL l
-  >>= \v -> logVal $ not $ toBool v
+  >>= \v -> pure $ not v
 evalL (l1 ||. l2) = evalL l1    // Sorry, McCarthy. I haven't been lazy, I'll keep consistency
   >>= \v1 -> evalL l2
-  >>= \v2 -> logVal $ (toBool v1) || (toBool v2)
+  >>= \v2 -> pure $ v1 || v2
 evalL (l1 &&. l2) = evalL l1    // Again, sorry, McCarthy
   >>= \v1 -> evalL l2
-  >>= \v2 -> logVal $ (toBool v1) && (toBool v2)
+  >>= \v2 -> pure $ v1 && v2
 
 // === simulation
 (>>>=)     :== 'iTasks'.tbind
