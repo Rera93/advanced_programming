@@ -118,12 +118,12 @@ eval (e1 +. e2) = eval e1
     >>= \v2 -> case v1 of
       (IntVal i1) -> case v2 of
           (IntVal i2) -> pure $ IntVal $ i1 + i2
-          (SetVal s) -> semVal $ s ++ [i1]
-      (SetVal s) -> semVal $ s ++ (toList v2)
-eval (e1 -. e2) = eval e1
+          (SetVal s) -> semVal $ 'List'.union s [i1]
+      (SetVal s) -> semVal $ 'List'.union s (toList v2)
+eval (e1 -. e2) = eval e1 
     >>= \v1 -> eval e2      // Not lazy
     >>= \v2 -> case v1 of
-      (SetVal s1) -> semVal $ [x \\ x <- s1 | not $ isMember x (toList v2)] 
+      (SetVal s1) -> semVal $  'List'.difference s1 (toList v2)
       (IntVal i1) -> case v2 of
         (IntVal i2) -> pure $ IntVal $ i1 + i2
         _ -> fail "Operator -. can't be used for Int,Set"
@@ -134,7 +134,7 @@ eval (e1 *. e2) = eval e1
         (IntVal i2) -> pure $ IntVal $ i1 * i2
         (SetVal s) -> semVal $ map ((*)i1) s
       (SetVal s1) -> case v2 of
-        (SetVal s2) -> semVal $ [x \\ x <- s1 | isMember x s2]
+        (SetVal s2) -> semVal $ 'List'.intersect s1 s2
         _ -> fail "Oerator *. can't be used for Set,Int"
 
 instance == Logical where
