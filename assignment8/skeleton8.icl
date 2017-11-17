@@ -19,6 +19,8 @@ import Data.Tuple, StdClass, StdList, StdMaybe, StdString
 import StdGeneric, StdBool, Data.Either
 from StdFunc import o, flip
 from Data.Func import $
+from StdOrdList import sort
+from StdOverloaded import class <
 import qualified Data.List as List
 import qualified Data.Map as Map
 
@@ -88,6 +90,14 @@ fail s = S $ \_ -> Left s
 
 // === semantics
 
+instance == Val where
+  (==) (IntVal i1) (IntVal i2) = i1 == i2
+  (==) (SetVal s1) (SetVal s2) = (sort s1) == (sort s2)
+
+instance < Val where
+  (<) (IntVal i1) (IntVal i2) = i1 < i2
+  (<) _ _ = False
+
 toList :: Val -> [Int]
 toList (IntVal v) = [v]
 toList (SetVal s) = s
@@ -127,6 +137,43 @@ eval (e1 *. e2) = eval e1
         (SetVal s2) -> semVal $ [x \\ x <- s1 | isMember x s2]
         _ -> fail "Oerator *. can't be used for Set,Int"
 
+instance == Logical where
+  (==) TRUE TRUE = True
+  (==) FALSE FALSE = True
+  (==) _ _ = False 
+
+toBool :: Logical -> Bool
+toBool TRUE = True
+toBool FALSE = False
+
+logVal :: Bool -> Sem Logical
+logVal True = pure $ TRUE
+logVal False = pure $ FALSE
+
+evalL :: Logical -> Sem Logical
+evalL TRUE = pure TRUE
+evalL FALSE = pure FALSE
+evalL (ee In se) = eval ee
+  >>= \e -> eval se 
+  >>= \s -> case e of
+    (IntVal e) -> case s of
+      (SetVal s) -> logVal $ isMember e s
+      _ -> fail "Operator In can't be used for Int,Int"
+    _ -> fail "Operator In can't be used for Set,Set"
+evalL (l1 ==. l2) = eval l1
+  >>= \v1 -> eval l2
+  >>= \v2 -> logVal $ v1 == v2
+evalL (e1 <=. e2) = eval e1
+  >>= \v1 -> eval e2
+  >>= \v2 -> logVal $ v1 == v2
+evalL (Not l) = evalL l
+  >>= \v -> logVal $ not $ toBool v
+evalL (l1 ||. l2) = evalL l1    // Sorry, McCarthy. I haven't been lazy, I'll keep consistency
+  >>= \v1 -> evalL l2
+  >>= \v2 -> logVal $ (toBool v1) || (toBool v2)
+evalL (l1 &&. l2) = evalL l1    // Again, sorry, McCarthy
+  >>= \v1 -> evalL l2
+  >>= \v2 -> logVal $ (toBool v1) && (toBool v2)
 
 // === simulation
 (>>>=)     :== 'iTasks'.tbind
