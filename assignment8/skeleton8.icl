@@ -26,6 +26,7 @@ from StdTuple import snd
 import qualified Data.List as List
 import qualified Data.Map as Map
 import StdEnum
+import GenPrint
 
 :: Expression = 
     New      [Int]
@@ -167,6 +168,9 @@ evalL (l1 &&. l2) = evalL l1    // Again, sorry, McCarthy
   >>= \v1 -> evalL l2
   >>= \v2 -> pure $ v1 && v2
 
+// I'm not sure whether statements should wreturn a value and what's the desired relation betweem
+// statements and expresssions, but the data type contains constructor for Logical and Expression,
+// wo I must return one of those.
 :: StmtVal = Exp Val | Log Bool
 
 evalS :: Stmt -> Sem StmtVal
@@ -187,6 +191,41 @@ evalS (For i set stmt) = eval set
     seqStmt (S f) (S g) = S $ \x -> f x >>= \(_,s) -> g s   // We don't care about the value, just change the state
     exec :: Stmt Ident Int -> Sem StmtVal
     exec stmt i v = store i (IntVal v) >>= \_ -> evalS stmt
+
+// === printing
+
+class printable a where
+  print :: a -> String
+
+instance printable Ident where
+  print i = i
+
+instance printable Expression where
+  print (New l) = printToString l
+  print (Elem i) = printToString i
+  print (Variable v) = v
+  print (Size set) = "sizeOf " +++ print set
+  print (e1 +. e2) = print e1 +++ " + " +++ print e2
+  print (e1 -. e2) = print e1 +++ " - " +++ print e2
+  print (e1 *. e2) = print e1 +++ " * " +++ print e2
+  print (e1 =. e2) = print e1 +++ " = " +++ print e2
+
+instance printable Logical where
+  print TRUE = "True"
+  print FALSE = "False"
+  print (e In s) = print e +++ " in " +++ print s
+  print (e1 ==. e2) = print e1 +++ " == " +++ print e2
+  print (e1 <=. e2) = print e1 +++ " <= " +++ print e2
+  print (Not l) = "not " +++ print l
+  print (l1 ||. l2) = print l1 +++ " || " +++ print l2
+  print (l1 &&. l2) = print l1 +++ " && " +++ print l2
+
+instance printable Stmt where
+  print (Logical l) = print l
+  print (Expression e) = print e
+  print (If p t e) = "if " +++ print p +++ "then\n\t" +++ print t +++ "\n\telse\n\t" +++ print e
+  print (For i set stmt) = "for " +++ i +++ " in " +++ print set +++ " do " +++ print stmt
+
 
 // === simulation
 (>>>=)     :== 'iTasks'.tbind
