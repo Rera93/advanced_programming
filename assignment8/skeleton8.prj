@@ -2,12 +2,12 @@ Version: 1.4
 Global
 	ProjectRoot:	.
 	Target:	iTasks
-	Exec:	{Project}/skeleton8.exe
+	Exec:	{Project}/skeleton8
 	CodeGen
 		CheckStacks:	False
 		CheckIndexes:	True
 	Application
-		HeapSize:	2097152
+		HeapSize:	20971520
 		StackSize:	512000
 		ExtraMemory:	8192
 		IntialHeapSize:	204800

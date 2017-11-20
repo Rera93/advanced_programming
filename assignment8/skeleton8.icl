@@ -1,3 +1,6 @@
+// Matheus Amazonas Cabral de Andrade
+// s4605640
+
 module skeleton8
 
 /*
@@ -11,7 +14,8 @@ from iTasks import class iTask, class toPrompt, class Publishable, instance Publ
 	generic gEq, generic gDefault, generic JSONDecode, generic JSONEncode, generic gText, generic gEditor, 
 	:: JSONNode, :: TextFormat, :: Editor, :: TaskValue(..), :: Stability, :: Task, :: Action, 
 	:: TaskCont(..), :: ViewOption(..), :: UpdateOption(..),
-	-||-, -||, ||-, >>*, always, hasValue, updateInformation, viewInformation, startEngine
+	-||-, -||, ||-, >>*, always, hasValue, updateInformation, viewInformation, startEngine, enterInformation,
+  :: EnterOption, defaultValue, @!, Action
 import qualified iTasks
 import qualified iTasks.WF.Combinators.Overloaded as WF
 import Data.Maybe
@@ -49,11 +53,10 @@ import GenPrint
 
 :: Stmt = 
       Logical Logical
+    | Expression Expression
     | If Logical Stmt Stmt
     | For Ident Set Stmt
-    | Expression Expression
-
-
+    
 :: Set    :== Expression
 :: Elem  :== Expression
 :: Ident  :== String
@@ -226,7 +229,6 @@ instance printable Stmt where
   print (If p t e) = "if " +++ print p +++ "then\n\t" +++ print t +++ "\n\telse\n\t" +++ print e
   print (For i set stmt) = "for " +++ i +++ " in " +++ print set +++ " do " +++ print stmt
 
-
 // === simulation
 (>>>=)     :== 'iTasks'.tbind
 (>>>|) a b :== 'iTasks'.tbind a (\_ -> b)
@@ -235,4 +237,26 @@ ActionOk   :== 'iTasks'.ActionOk
 ActionQuit :== 'iTasks'.ActionQuit
 ActionNew  :== 'iTasks'.ActionNew
 
-Start = ()
+derive class iTask Expression, Logical, Stmt, Sem, Val, StmtVal
+derive gPrint Val, StmtVal, (,)
+
+createProgram :: Task State
+createProgram 
+    # s =  'Map'.newMap
+    = enterInformation "Enter the first input" [] 
+      >>>= loop s
+
+loop :: State Stmt -> Task State
+loop state stmt = case (unS (evalS stmt)) state of
+    (Left e) = viewInformation "Evaluation error" [] e
+          >>>| loop state (Logical TRUE)
+    (Right (v, state)) = (enterInformation "Enter a new statement" []
+          -|| viewInformation "Value" [] (printToString v)
+          -|| viewInformation "State" [ViewAs (printToString o 'Map'.toList)] state
+          -|| viewInformation "Pretty print" [] (print stmt))
+          >>* [OnAction ActionOk (hasValue (loop state)),
+               OnAction (Action "Reset state") (always (loop ('Map'.newMap) stmt)),
+               OnAction (Action "Quit") (always createProgram)]
+
+Start :: *World -> *World
+Start w = startEngine createProgram w
