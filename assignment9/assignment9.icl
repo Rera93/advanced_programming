@@ -28,6 +28,8 @@ from Data.Func import $
 unS :: (Sem a) -> State -> Either String (a, State)
 unS (S s) = s
 
+// ====== State ======
+
 instance Functor Sem where
 	fmap f e = liftM f e
 
@@ -42,12 +44,16 @@ instance Monad Sem where
 		Right (v, s) -> unS (f v) s
 		Left e -> Left e
 
+// ====== Integer Expressions ======
+
 integer :: Int -> Element 
 integer i = pure i
 
 size :: Set -> Element
 size s = s
 	>>= \set -> pure $ length set
+
+
 
 instance + Element where
 	(+) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 + v2
@@ -93,6 +99,8 @@ read i = S $ \s -> case 'Map'.get i s of
 fail :: String -> Sem a
 fail s = S $ \_ -> Left s
 
+// ====== Set Expressions ======
+
 class Var a where
 	variable :: Ident -> a
 	(=.) infixl 2 :: Ident a -> a
@@ -108,5 +116,54 @@ instance Var Set where
 		(s :: Set) -> s
 		_ -> fail $ "Variable " +++ i +++ " is of type Int, not Set"
 	(=.) i uset = uset >>= \set -> store i set
+
+// ====== Statements ======
+
+(In) infix 4 :: Element Set -> Sem Bool
+(In) ue us = ue >>= \e -> us >>= \set -> pure $ isMember e set
+
+Not :: (Sem Bool) -> Sem Bool
+Not e = e >>= \v -> pure $ not v
+
+(||.) infixr 2 :: (Sem Bool) (Sem Bool) -> Sem Bool
+(||.) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 || v2
+
+(&&.) infixr 2 :: (Sem Bool) (Sem Bool) -> Sem Bool
+(&&.) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 && v2
+
+class ==. a where
+	(==.) infix 4 :: a a -> Sem Bool
+
+class <=. a where
+	(<=.) infix 4 :: a a -> Sem Bool
+
+instance ==. (Sem a) | == a where
+	(==.) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 == v2
+
+instance <=. (Sem a) | < a where
+	(<=.) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 <= v2
+
+
+Start :: Either String (Int, State)
+Start = eval (("myX" =. (integer 42)) - integer 10 + variable "myX") state
+	where
+		state = 'Map'.newMap
+		//state = 'Map'.put "myX" (dynamic (integer 42)) 'Map'.newMap 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
