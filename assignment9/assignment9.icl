@@ -17,6 +17,7 @@ from Data.Func import $
 
 :: Element :== Sem Int 
 :: Set :== Sem [Int]
+:: Stmt :== Sem ()
 
 // I chose to represent the State as a mapping from Ident
 // to Dynamic mainly because I've never used Dynamic and 
@@ -52,8 +53,6 @@ integer i = pure i
 size :: Set -> Element
 size s = s
 	>>= \set -> pure $ length set
-
-
 
 instance + Element where
 	(+) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 + v2
@@ -143,9 +142,19 @@ instance ==. (Sem a) | == a where
 instance <=. (Sem a) | < a where
 	(<=.) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 <= v2
 
+If :: (Sem Bool) Stmt Stmt -> Stmt
+If p t e = p >>= \c -> if c t e
 
-Start :: Either String (Int, State)
-Start = eval (("myX" =. (integer 42)) - integer 10 + variable "myX") state
+For :: Ident Set Stmt -> Stmt
+For i uset stmt = uset >>=
+		\set -> foldr seqStmt (pure ()) (map (exec stmt i) set)
+	where
+		seqStmt :: Stmt Stmt -> Stmt
+    	seqStmt (S f) (S g) = S $ \x -> f x >>= \(_,s) -> g s  
+    	exec :: Stmt Ident Int -> Stmt
+   		exec stmt i v = store i v >>| stmt
+
+Start = eval (integer 41 <=. integer 45 &&. integer 54 <=. integer 71) state
 	where
 		state = 'Map'.newMap
 		//state = 'Map'.put "myX" (dynamic (integer 42)) 'Map'.newMap 
