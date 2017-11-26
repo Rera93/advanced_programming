@@ -4,6 +4,7 @@ import StdEnv
 import StdDynamic
 import Data.Either
 import Data.Functor
+import Data.Maybe
 import Control.Applicative 
 import Control.Monad
 import qualified Data.List as List
@@ -81,6 +82,31 @@ intersect ux us = us >>= \s -> ux >>= \x -> pure $ map ((*)x) s
 eval :: (Sem a) -> State -> Either String (a, State)
 eval (S e) = e
 
-Start = eval (integer 2 - integer 7) 'Map'.newMap
+store :: Ident a -> Sem a | TC a
+store i v = S $ \s -> Right (v, 'Map'.put i (dynamic v) s)
+
+read :: Ident -> Sem Dynamic
+read i = S $ \s -> case 'Map'.get i s of
+  Just v -> Right (v, s)
+  Nothing -> Left ("Variable not found: " +++ i)
+
+fail :: String -> Sem a
+fail s = S $ \_ -> Left s
+
+class Var a where
+	variable :: Ident -> a
+	(=.) infixl 2 :: Ident a -> a
+
+instance Var Element where
+	variable i = read i >>= \var -> case var of
+		(x :: Element) -> x
+		_ -> fail $ "Variable " +++ i +++ " is of type Set, not Int"
+	(=.) i ux = ux >>= \v -> store i v
+
+instance Var Set where
+	variable i = read i >>= \var -> case var of
+		(s :: Set) -> s
+		_ -> fail $ "Variable " +++ i +++ " is of type Int, not Set"
+	(=.) i uset = uset >>= \set -> store i set
 
 
