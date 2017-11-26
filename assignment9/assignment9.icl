@@ -145,12 +145,13 @@ instance <=. (Sem a) | < a where
 If :: (Sem Bool) Stmt Stmt -> Stmt
 If p t e = p >>= \c -> if c t e
 
+(:.) infixl 4 :: Stmt Stmt -> Stmt
+(:.) (S f) (S g) = S $ \x -> f x >>= \(_,s) -> g s  
+
 For :: Ident Set Stmt -> Stmt
 For i uset stmt = uset >>=
-		\set -> foldr seqStmt (pure ()) (map (exec stmt i) set)
+		\set -> foldr (:.) (pure ()) (map (exec stmt i) set)
 	where
-		seqStmt :: Stmt Stmt -> Stmt
-    	seqStmt (S f) (S g) = S $ \x -> f x >>= \(_,s) -> g s  
     	exec :: Stmt Ident Int -> Stmt
    		exec stmt i v = store i v >>| stmt
 
