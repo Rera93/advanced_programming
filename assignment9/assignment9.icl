@@ -99,7 +99,7 @@ class Var a where
 
 instance Var Element where
 	variable i = read i >>= \var -> case var of
-		(x :: Element) -> x
+		(x :: Int) -> pure x
 		_ -> fail $ "Variable " +++ i +++ " is of type Set, not Int"
 	(=.) i ux = ux >>= \v -> store i v
 
