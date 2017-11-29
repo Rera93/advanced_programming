@@ -1,3 +1,6 @@
+// Matheus Amazonas Cabral de Andrade
+// s4605640
+
 module assignment9
 
 import StdEnv
@@ -14,10 +17,15 @@ from Data.Func import $
 :: Ident :== String
 :: State :== 'Map'.Map Ident Dynamic
 :: Sem a = S (State -> Either String (a, State))
+:: Views a = { a :: Sem a,
+			   p :: String}
 
-:: Element :== Sem Int 
-:: Set :== Sem [Int]
-:: Stmt :== Sem ()
+:: Element :== Views Int 
+:: Set :== Views [Int]
+:: Stmt :== Views ()
+
+show :: String (Views a) -> Views a
+show str views = {views & p = str +++ views.p}
 
 // I chose to represent the State as a mapping from Ident
 // to Dynamic mainly because I've never used Dynamic and 
@@ -45,14 +53,43 @@ instance Monad Sem where
 		Right (v, s) -> unS (f v) s
 		Left e -> Left e
 
+instance Functor Views where
+	fmap f v = liftM f v
+
+instance Applicative Views where
+	pure x = {a = S (\s -> Right (x, s)), p = ""}
+	(<*>) vf va = {a = eval, p = print}
+		where
+			eval = S $ \s -> case unS vf.a s of
+				Right (f,s) = case unS va.a s of
+	          		Right (a,s) = Right (f a, s)
+	         		Left e = Left e
+	      		Left e = Left e
+	   		print = vf.p +++ va.p 
+
+instance Monad Views where
+	bind x f = {a = eval, p = print}
+		where
+			eval = S $ \s -> case unS (x.a) s of
+				Right (v, s) -> unS ((f v).a) s
+				Left e -> Left e
+			print = x.p 				// I have no idea how to define this.
+
 // ====== Integer Expressions ======
 
 integer :: Int -> Element 
-integer i = pure i
+integer i = {a = pure i,
+			 p = toString i}
+
+set :: [Int] -> Set
+set s = {a = pure s,
+		 p = toString s}
 
 size :: Set -> Element
-size s = s
-	>>= \set -> pure $ length set
+size s = {a = eval, p = print}
+	where
+		eval = s.a >>= \set -> pure $ length set
+		print = "sizeOf(" +++ s.p +++ ")"
 
 instance + Element where
 	(+) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 + v2
@@ -84,11 +121,20 @@ difference us ue = us >>= \s -> ue >>= \e -> pure $ 'List'.difference s [e]
 intersect :: Element Set -> Set
 intersect ux us = us >>= \s -> ux >>= \x -> pure $ map ((*)x) s
 
-eval :: (Sem a) -> State -> Either String (a, State)
-eval (S e) = e
+instance + (Views a) | + a where
+	+ x y = (+) <$> x <*> show "+" y
 
-store :: Ident a -> Sem a | TC a
-store i v = S $ \s -> Right (v, 'Map'.put i (dynamic v) s)
+instance - (Views a) | - a where
+	- x y = (-) <$> x <*> show "-" y
+
+instance * (Views a) | * a where
+	* x y = (*) <$> x <*> show "*" y
+
+store :: Ident a -> Views () | TC a
+store i v = {a = eval, p = ""}
+	where
+		eval = S $ \s -> Right ((), 'Map'.put i (dynamic v) s)
+		print = i +++ " = " +++ v.p
 
 read :: Ident -> Sem Dynamic
 read i = S $ \s -> case 'Map'.get i s of
@@ -102,65 +148,85 @@ fail s = S $ \_ -> Left s
 
 class Var a where
 	variable :: Ident -> a
-	(=.) infixl 2 :: Ident a -> a
+	(=.) infixl 2 :: Ident a -> Stmt
 
 instance Var Element where
-	variable i = read i >>= \var -> case var of
-		(x :: Int) -> pure x
-		_ -> fail $ "Variable " +++ i +++ " is of type Set, not Int"
-	(=.) i ux = ux >>= \v -> store i v
+	variable i = { a = eval, p = print}
+		where
+			eval = read i >>= \var -> case var of
+				(x :: Element) -> x.a
+				_ -> fail $ "Variable " +++ i +++ " is of type Set, not Int"
+			print = "var " +++ i
+	(=.) i ux = store i ux
 
 instance Var Set where
-	variable i = read i >>= \var -> case var of
-		(s :: Set) -> s
-		_ -> fail $ "Variable " +++ i +++ " is of type Int, not Set"
-	(=.) i uset = uset >>= \set -> store i set
+	variable i = {a = eval, p = print}
+		where
+			eval = read i >>= \var -> case var of
+				(s :: Set) -> s.a
+				_ -> fail $ "Variable " +++ i +++ " is of type Int, not Set"
+			print = "var " +++ i
+	(=.) i uset = store i uset
 
 // ====== Statements ======
 
-(In) infix 4 :: Element Set -> Sem Bool
-(In) ue us = ue >>= \e -> us >>= \set -> pure $ isMember e set
+(In) infix 4 :: Element Set -> Views Bool
+(In) ue us = {a = eval, p = print}
+	where
+		eval = ue.a >>= \e -> us.a >>= \set -> pure $ isMember e set
+		print = ue.p +++ " in " +++ us.p
 
-Not :: (Sem Bool) -> Sem Bool
-Not e = e >>= \v -> pure $ not v
+Not :: (Views Bool) -> Views Bool
+Not e = {a = eval, p = print}
+	where
+		eval = e.a >>= \v -> pure $ not v
+		print = "not " +++ e.p
 
-(||.) infixr 2 :: (Sem Bool) (Sem Bool) -> Sem Bool
-(||.) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 || v2
+(||.) infixr 3 :: (Views Bool) (Views Bool) -> Views Bool 
+(||.) x y = (||) <$> x <*> show "||" y
 
-(&&.) infixr 2 :: (Sem Bool) (Sem Bool) -> Sem Bool
-(&&.) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 && v2
+(&&.) infixr 3 :: (Views Bool) (Views Bool) -> Views Bool 
+(&&.) x y = (&&) <$> x <*> show "&&" y
 
-class ==. a where
-	(==.) infix 4 :: a a -> Sem Bool
+(==.) infix 4 :: (Views a) (Views a) -> Views Bool | == a 
+(==.) x y = (==) <$> x <*> show "==" y
 
-class <=. a where
-	(<=.) infix 4 :: a a -> Sem Bool
+(<=.) infix 4 :: (Views a) (Views a) -> Views Bool | Ord a 
+(<=.) x y = (<=) <$> x <*> show "<=" y
 
-instance ==. (Sem a) | == a where
-	(==.) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 == v2
-
-instance <=. (Sem a) | < a where
-	(<=.) e1 e2 = e1 >>= \v1 -> e2 >>= \v2 -> pure $ v1 <= v2
-
-If :: (Sem Bool) Stmt Stmt -> Stmt
-If p t e = p >>= \c -> if c t e
+If :: (Views Bool) Stmt Stmt -> Stmt
+If p t e = {a = eval, p = print}
+	where
+		eval = p.a >>= \c -> if c t.a e.a
+		print = "if (" +++ p.p +++ ") then {\n\t" +++ t.p +++ "}\nelse {\n\t" +++ e.p +++ "}"
 
 (:.) infixl 4 :: Stmt Stmt -> Stmt
-(:.) (S f) (S g) = S $ \x -> f x >>= \(_,s) -> g s  
+(:.) f g = {a = eval, p = print}
+	where
+		eval = f.a >>| g.a
+		print = f.p +++ ";\n" +++ g.p
 
+// I don't know how to define FOR.
+
+/*
 For :: Ident Set Stmt -> Stmt
-For i uset stmt = uset >>=
-		\set -> foldr (:.) (pure ()) (map (exec stmt i) set)
+For i uset stmt = {a = eval, p = print}
 	where
-    	exec :: Stmt Ident Int -> Stmt
-   		exec stmt i v = store i v >>| stmt
+		eval = uset.a >>= \set -> foldr (:.) (pure ()) (map (exec stmt i) set)
+			where
+		    	exec :: Stmt Ident Int -> Stmt
+		   		exec stmt i v = store i v >>| stmt
+		print = "for " +++ i +++ " in " +++ uset.p +++ "{\n\t" +++ stmt.p +++"\n}\n"
+*/
 
-Start = eval (integer 41 <=. integer 45 &&. integer 54 <=. integer 71) state
+run :: (Views a) -> Either String (a, String)
+run s = case (unS s.a emptyState) of
+		Right (v,_) -> Right (v, s.p)
+		Left e -> Left e
 	where
-		state = 'Map'.newMap
-		//state = 'Map'.put "myX" (dynamic (integer 42)) 'Map'.newMap 
+		emptyState = 'Map'.newMap
 
-
+Start = run (If (integer 6 <=. integer 7) ("x" =. integer 42) ("x" =. integer 66))
 
 
 
