@@ -186,6 +186,56 @@ instance printable Stmt where
   print (For i set stmt) = "for " +++ i +++ " in " +++ print set +++ " do " +++ print stmt
   print (stmt1 :. stmt2) = print stmt1 +++ "\n" +++ print stmt2
 
+// ----- Syntactic Sugar -----
+
+class Var a where
+  var :: Ident -> a
+
+class =. a where
+  (=.) infixl 2 :: Ident a -> a
+
+instance Var Elem where
+  var i = VarElem bm i
+
+instance Var Set where
+  var i = VarSet bm i
+
+instance =. Elem where
+  (=.) i e = AttElem bm i e
+
+instance =. Set where
+  (=.) i s = AttSet bm i s
+
+instance + Elem where
+  (+) e1 e2 = Plus bm e1 e2
+
+instance + Set where
+  (+) s1 s2 = Union bm s1 s2
+
+instance - Elem where
+  (-) e1 e2 = Minus bm e1 e2
+
+instance - Set where
+  (-) s1 s2 = Diff bm s1 s2
+
+instance * Elem where
+  (*) e1 e2 = Mult bm e1 e2
+
+instance * Set where
+  (*) s1 s2 = Inter bm s1 s2
+
+(+=) infixl 6 :: Set Elem -> Set
+(+=) s e = AddSetEle bm s e
+
+(=+) infixl 6 :: Elem Set -> Set
+(=+) e s = AddEleSet bm e s
+
+(-=) infixl 6 :: Set Elem -> Set
+(-=) s e = DiffE bm s e
+
+
+
+
 
 
 
