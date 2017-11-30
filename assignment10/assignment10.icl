@@ -61,16 +61,16 @@ instance Applicative Sem where
 instance Monad Sem where
   bind (S x) f = S $ \s -> let (v,ns) = x s in unS (f v) ns
 
-storeE :: Ident Int -> Sem Int
-storeE i v = S $ \s -> (v, 'Map'.put i (Left v) s)
+storeE :: Ident Int (BM a Int) -> Sem a
+storeE i v bm = S $ \s -> (bm.f v, 'Map'.put i (Left v) s)
 
 readE :: Ident -> Sem Int
 readE i = S $ \s -> case 'Map'.get i s of
   Just (Left v) -> (v, s)
   _ -> (0,s)
 
-storeS :: Ident [Int] -> Sem [Int]
-storeS i v = S $ \s -> (v, 'Map'.put i (Right v) s)
+storeS :: Ident [Int] (BM a [Int]) -> Sem a
+storeS i v bm = S $ \s -> (bm.f v, 'Map'.put i (Right v) s)
 
 readS :: Ident -> Sem [Int]
 readS i = S $ \s -> case 'Map'.get i s of
@@ -78,3 +78,25 @@ readS i = S $ \s -> case 'Map'.get i s of
   _ -> ([],s)
 
 Start = 1
+
+// ----- Evaluation -----
+
+eval :: (Expression a) -> Sem a
+eval (New bm set) = pure $ bm.f set
+eval (Elem bm ele) = pure $ bm.f ele
+eval (VarElem bm var) = readE var >>= \v -> pure $ bm.f v
+eval (VarSet bm var) = readS var >>= \v -> pure $ bm.f v
+eval (Size bm eSet) = eval eSet >>= \set -> pure $ bm.f $ length set
+eval (Plus bm e1 e2) = eval e1 >>= \x1 -> eval e2 >>= \x2 -> pure $ bm.f $ x1+x2
+eval (Union bm e1 e2) = eval e1 >>= \s1 -> eval e2 >>= \s2 -> pure $ bm.f $ union s1 s2
+eval (AddEleSet bm ee se) = eval ee >>= \e -> eval se >>= \s -> pure $ bm.f $ union s [e]
+eval (AddSetEle bm se ee) = eval ee >>= \e -> eval se >>= \s -> pure $ bm.f $ union s [e]
+eval (Minus bm e1 e2) = eval e1 >>= \x1 -> eval e2 >>= \x2 -> pure $ bm.f $ x1-x2
+eval (Diff bm e1 e2) = eval e1 >>= \s1 -> eval e2 >>= \s2 -> pure $ bm.f $ difference s1 s2
+eval (DiffE bm e1 e2) = eval e1 >>= \s -> eval e2 >>= \e -> pure $ bm.f $ difference s [e]
+eval (Mult bm e1 e2) = eval e1 >>= \x1 -> eval e2 >>= \x2 -> pure $ bm.f $ x1*x2
+eval (Inter bm e1 e2) = eval e1 >>= \s1 -> eval e2 >>= \s2 -> pure $ bm.f $ intersect s1 s2
+eval (Scale bm ee se) = eval ee >>= \e -> eval se >>= \s -> pure $ bm.f $ map ((*)e) s
+eval (AttElem bm i ee) = eval ee >>= \e -> storeE i e bm
+eval (AttSet bm i se) = eval se >>= \s -> storeS i s bm
+
