@@ -8,6 +8,7 @@ import StdString
 import Data.Maybe
 import StdList 
 import StdFunc
+import StdBool
 import Data.List
 from Data.Func import $
 
@@ -28,18 +29,28 @@ bm = {t = id, f = id}
   | VarElem   (BM a Int)   String
   | VarSet    (BM a [Int]) String
   | Size      (BM a Int)   Set
-  | Plus 	  (BM a Int)   Elem Elem
+  | Plus 	    (BM a Int)   Elem Elem
   | Union     (BM a [Int]) Set Set
   | AddEleSet (BM a [Int]) Elem Set
   | AddSetEle (BM a [Int]) Set Elem
   | Minus     (BM a Int)   Elem Elem
-  | Diff	  (BM a [Int]) Set Set 
+  | Diff	    (BM a [Int]) Set Set 
   | DiffE     (BM a [Int]) Set Elem
-  | Mult	  (BM a Int)   Elem Elem
+  | Mult	    (BM a Int)   Elem Elem
   | Inter 	  (BM a [Int]) Set Set
-  | Scale	  (BM a [Int]) Elem Set
+  | Scale	    (BM a [Int]) Elem Set
   | AttElem   (BM a Int)   Ident Elem
   | AttSet    (BM a [Int]) Ident Set
+
+:: Logical = 
+    TRUE 
+  | FALSE 
+  | (In) infix 4 Elem Set
+  | E.a: (==.) infix 4 (Expression a) (Expression a) & == a
+  | (<=.) infix 4 Elem Elem
+  | Not Logical
+  | (||.) infixr 2 Logical Logical
+  | (&&.) infixr 3 Logical Logical
 
 // ----- State -----
 
@@ -79,24 +90,54 @@ readS i = S $ \s -> case 'Map'.get i s of
 
 Start = 1
 
-// ----- Evaluation -----
+// ----- evalEuation -----
 
-eval :: (Expression a) -> Sem a
-eval (New bm set) = pure $ bm.f set
-eval (Elem bm ele) = pure $ bm.f ele
-eval (VarElem bm var) = readE var >>= \v -> pure $ bm.f v
-eval (VarSet bm var) = readS var >>= \v -> pure $ bm.f v
-eval (Size bm eSet) = eval eSet >>= \set -> pure $ bm.f $ length set
-eval (Plus bm e1 e2) = eval e1 >>= \x1 -> eval e2 >>= \x2 -> pure $ bm.f $ x1+x2
-eval (Union bm e1 e2) = eval e1 >>= \s1 -> eval e2 >>= \s2 -> pure $ bm.f $ union s1 s2
-eval (AddEleSet bm ee se) = eval ee >>= \e -> eval se >>= \s -> pure $ bm.f $ union s [e]
-eval (AddSetEle bm se ee) = eval ee >>= \e -> eval se >>= \s -> pure $ bm.f $ union s [e]
-eval (Minus bm e1 e2) = eval e1 >>= \x1 -> eval e2 >>= \x2 -> pure $ bm.f $ x1-x2
-eval (Diff bm e1 e2) = eval e1 >>= \s1 -> eval e2 >>= \s2 -> pure $ bm.f $ difference s1 s2
-eval (DiffE bm e1 e2) = eval e1 >>= \s -> eval e2 >>= \e -> pure $ bm.f $ difference s [e]
-eval (Mult bm e1 e2) = eval e1 >>= \x1 -> eval e2 >>= \x2 -> pure $ bm.f $ x1*x2
-eval (Inter bm e1 e2) = eval e1 >>= \s1 -> eval e2 >>= \s2 -> pure $ bm.f $ intersect s1 s2
-eval (Scale bm ee se) = eval ee >>= \e -> eval se >>= \s -> pure $ bm.f $ map ((*)e) s
-eval (AttElem bm i ee) = eval ee >>= \e -> storeE i e bm
-eval (AttSet bm i se) = eval se >>= \s -> storeS i s bm
+evalE :: (Expression a) -> Sem a
+evalE (New bm set) = pure $ bm.f set
+evalE (Elem bm ele) = pure $ bm.f ele
+evalE (VarElem bm var) = readE var >>= \v -> pure $ bm.f v
+evalE (VarSet bm var) = readS var >>= \v -> pure $ bm.f v
+evalE (Size bm eSet) = evalE eSet >>= \set -> pure $ bm.f $ length set
+evalE (Plus bm e1 e2) = evalE e1 >>= \x1 -> evalE e2 >>= \x2 -> pure $ bm.f $ x1+x2
+evalE (Union bm e1 e2) = evalE e1 >>= \s1 -> evalE e2 >>= \s2 -> pure $ bm.f $ union s1 s2
+evalE (AddEleSet bm ee se) = evalE ee >>= \e -> evalE se >>= \s -> pure $ bm.f $ union s [e]
+evalE (AddSetEle bm se ee) = evalE ee >>= \e -> evalE se >>= \s -> pure $ bm.f $ union s [e]
+evalE (Minus bm e1 e2) = evalE e1 >>= \x1 -> evalE e2 >>= \x2 -> pure $ bm.f $ x1-x2
+evalE (Diff bm e1 e2) = evalE e1 >>= \s1 -> evalE e2 >>= \s2 -> pure $ bm.f $ difference s1 s2
+evalE (DiffE bm e1 e2) = evalE e1 >>= \s -> evalE e2 >>= \e -> pure $ bm.f $ difference s [e]
+evalE (Mult bm e1 e2) = evalE e1 >>= \x1 -> evalE e2 >>= \x2 -> pure $ bm.f $ x1*x2
+evalE (Inter bm e1 e2) = evalE e1 >>= \s1 -> evalE e2 >>= \s2 -> pure $ bm.f $ intersect s1 s2
+evalE (Scale bm ee se) = evalE ee >>= \e -> evalE se >>= \s -> pure $ bm.f $ map ((*)e) s
+evalE (AttElem bm i ee) = evalE ee >>= \e -> storeE i e bm
+evalE (AttSet bm i se) = evalE se >>= \s -> storeS i s bm
+
+evalL :: Logical -> Sem Bool
+evalL TRUE = pure True
+evalL FALSE = pure False
+evalL (ee In se) = evalE ee >>= \e -> evalE se >>= \s -> pure $ isMember e s
+evalL (e1 ==. e2) = evalE e1 >>= \v1 -> evalE e2 >>= \v2 -> pure $ v1 == v2
+evalL (e1 <=. e2) = evalE e1 >>= \v1 -> evalE e2 >>= \v2 -> pure $ v1<=v2
+evalL (Not e) = evalL e >>= \l -> pure $ not l
+evalL (e1 ||. e2) = evalL e1 >>= \b1 -> evalL e2 >>= \b2 -> pure $ b1 || b2
+evalL (e1 &&. e2) = evalL e1 >>= \b1 -> evalL e2 >>= \b2 -> pure $ b1 && b2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
 
