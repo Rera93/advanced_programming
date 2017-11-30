@@ -2,15 +2,17 @@ module assignment10
 
 import Control.Applicative
 import Control.Monad
-import qualified Data.Map as Map
 import Data.Either
-import StdString
-import Data.Maybe
-import StdList 
-import StdFunc
-import StdBool
 import Data.List
+import Data.Maybe
+import StdBool
+import StdFunc
+import StdList 
+//import StdMaybe
+import StdString
+import GenPrint
 from Data.Func import $
+import qualified Data.Map as Map
 
 :: BM a b = { t :: a -> b, f :: b -> a}
 
@@ -97,7 +99,7 @@ readS i = S $ \s -> case 'Map'.get i s of
 
 Start = 1
 
-// ----- evalEuation -----
+// ----- Evaluation -----
 
 evalE :: (Expression a) -> Sem a
 evalE (New bm set) = pure $ bm.f set
@@ -140,8 +142,49 @@ evalS (For i eset stmt) = evalE eset >>= \set -> forEach i set stmt
     exec :: Stmt Ident Int -> Sem ()
     exec stmt i v = storeE i v bm >>= \_ -> evalS stmt
 
+// ----- Printing -----
 
+class printable a where
+  print :: a -> String
 
+instance printable Ident where
+  print i = i
+
+instance printable (Expression a) where
+  print (New _ l) = printToString l
+  print (Elem _ i) = printToString i
+  print (VarElem _ v) = v
+  print (VarSet _ v) = v
+  print (Size _ set) = "sizeOf " +++ print set
+  print (Plus _ e1 e2) = print e1 +++ " + " +++ print e2
+  print (Union _ e1 e2) = print e1 +++ " + " +++ print e2
+  print (AddEleSet _ e1 e2) = print e1 +++ " + " +++ print e2
+  print (AddSetEle _ e1 e2) = print e1 +++ " + " +++ print e2
+  print (Minus _ e1 e2) = print e1 +++ " - " +++ print e2
+  print (Diff _ e1 e2) = print e1 +++ " - " +++ print e2
+  print (DiffE _ e1 e2) = print e1 +++ " - " +++ print e2
+  print (Mult _ e1 e2) = print e1 +++ " * " +++ print e2
+  print (Inter _ e1 e2) = print e1 +++ " * " +++ print e2
+  print (Scale _ e1 e2) = print e1 +++ " * " +++ print e2
+  print (AttElem _ e1 e2) = print e1 +++ " = " +++ print e2
+  print (AttSet _ e1 e2) = print e1 +++ " = " +++ print e2
+
+instance printable Logical where
+  print TRUE = "True"
+  print FALSE = "False"
+  print (e In s) = print e +++ " in " +++ print s
+  print (e1 ==. e2) = print e1 +++ " == " +++ print e2
+  print (e1 <=. e2) = print e1 +++ " <= " +++ print e2
+  print (Not l) = "not " +++ print l
+  print (l1 ||. l2) = print l1 +++ " || " +++ print l2
+  print (l1 &&. l2) = print l1 +++ " && " +++ print l2
+
+instance printable Stmt where
+  print (Logical l) = print l
+  print (Expression e) = print e
+  print (If p t e) = "if " +++ print p +++ "then\n\t" +++ print t +++ "\n\telse\n\t" +++ print e
+  print (For i set stmt) = "for " +++ i +++ " in " +++ print set +++ " do " +++ print stmt
+  print (stmt1 :. stmt2) = print stmt1 +++ "\n" +++ print stmt2
 
 
 
