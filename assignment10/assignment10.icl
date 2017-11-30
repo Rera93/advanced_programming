@@ -52,6 +52,13 @@ bm = {t = id, f = id}
   | (||.) infixr 2 Logical Logical
   | (&&.) infixr 3 Logical Logical
 
+:: Stmt = 
+    Logical Logical
+  | E.a: Expression (Expression a)
+  | If Logical Stmt Stmt
+  | For Ident Set Stmt
+  | (:.) infixl 1 Stmt Stmt
+
 // ----- State -----
 
 :: State :== 'Map'.Map String (Either Int [Int])
@@ -121,10 +128,17 @@ evalL (Not e) = evalL e >>= \l -> pure $ not l
 evalL (e1 ||. e2) = evalL e1 >>= \b1 -> evalL e2 >>= \b2 -> pure $ b1 || b2
 evalL (e1 &&. e2) = evalL e1 >>= \b1 -> evalL e2 >>= \b2 -> pure $ b1 && b2
 
-
-
-
-
+evalS :: Stmt -> Sem ()
+evalS (Logical _) = pure () // I don't understand why there's a Logical construsctor for Stmt
+evalS (Expression e) = evalE e >>| pure ()
+evalS (If p s1 s2) = evalL p >>= \b -> if b (evalS s1) (evalS s2) >>| pure ()
+evalS (es1 :. es2) = evalS es1 >>| evalS es2 >>| pure ()
+evalS (For i eset stmt) = evalE eset >>= \set -> forEach i set stmt
+  where
+    forEach :: Ident [Int] Stmt -> Sem ()
+    forEach i set stmt = foldr (>>|) (pure ()) (map (exec stmt i) set)
+    exec :: Stmt Ident Int -> Sem ()
+    exec stmt i v = storeE i v bm >>= \_ -> evalS stmt
 
 
 
