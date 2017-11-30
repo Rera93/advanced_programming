@@ -8,8 +8,8 @@ import Data.Maybe
 import StdBool
 import StdFunc
 import StdList 
-//import StdMaybe
 import StdString
+import StdTuple
 import GenPrint
 from Data.Func import $
 import qualified Data.Map as Map
@@ -20,7 +20,6 @@ bm :: BM a a
 bm = {t = id, f = id}
 
 // ----- DSL Syntax -----
-
 :: Set    :== Expression [Int]
 :: Elem  :== Expression Int
 :: Ident  :== String
@@ -96,8 +95,6 @@ readS :: Ident -> Sem [Int]
 readS i = S $ \s -> case 'Map'.get i s of
   Just (Right v) -> (v, s)
   _ -> ([],s)
-
-Start = 1
 
 // ----- Evaluation -----
 
@@ -188,11 +185,20 @@ instance printable Stmt where
 
 // ----- Syntactic Sugar -----
 
+class Lit a where
+  lit :: a -> Expression a
+
 class Var a where
   var :: Ident -> a
 
 class =. a where
-  (=.) infixl 2 :: Ident a -> a
+  (=.) infixl 2 :: Ident a -> Stmt
+
+instance Lit Int where
+  lit i = Elem bm i
+
+instance Lit [Int] where
+  lit s = New bm s
 
 instance Var Elem where
   var i = VarElem bm i
@@ -201,10 +207,10 @@ instance Var Set where
   var i = VarSet bm i
 
 instance =. Elem where
-  (=.) i e = AttElem bm i e
+  (=.) i e = Expression $ AttElem bm i e
 
 instance =. Set where
-  (=.) i s = AttSet bm i s
+  (=.) i s = Expression $ AttSet bm i s
 
 instance + Elem where
   (+) e1 e2 = Plus bm e1 e2
@@ -232,6 +238,26 @@ instance * Set where
 
 (-=) infixl 6 :: Set Elem -> Set
 (-=) s e = DiffE bm s e
+
+(=*) infixl 6 :: Set Elem -> Set
+(=*) s e = Scale bm e s
+
+// ----- Start -----
+
+Start = eval $ If (lit 40 <=. lit 6) ("x" =. lit 4) ("y" =. lit 5)
+  where
+    eval e = id $ (unS (evalS e)) 'Map'.newMap
+
+// ----- Question -----
+
+//    Do I really need a constructor for every variation of overloaded
+// functions? Example: + (Mult, AddElemSet, AddSetElem, Union)
+//    The state might contain variables of Set and Elem. How to make 
+// reading a var from the state stactically typed? Either Int [Int]?
+
+// Big problem: 
+//    Start = eval $ "x" =. lit 4 :. "y" =. lit 5 :. "z" =. var "x"
+// Different keywords for each "var"? Maybe "set" and "num"?
 
 
 
