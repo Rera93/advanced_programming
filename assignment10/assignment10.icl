@@ -181,8 +181,8 @@ instance printable Logical where
 instance printable Stmt where
   print (Logical l) = print l
   print (Expression e) = print e
-  print (If p t e) = "if " +++ print p +++ "then\n\t" +++ print t +++ "\n\telse\n\t" +++ print e
-  print (For i set stmt) = "for " +++ i +++ " in " +++ print set +++ " do " +++ print stmt
+  print (If p t e) = "if " +++ print p +++ "\nthen\n" +++ print t +++ "\n\telse\n" +++ print e
+  print (For i set stmt) = "for " +++ i +++ " in " +++ print set +++ " do\n" +++ print stmt
   print (stmt1 :. stmt2) = print stmt1 +++ "\n" +++ print stmt2
 
 // ----- Syntactic Sugar -----
