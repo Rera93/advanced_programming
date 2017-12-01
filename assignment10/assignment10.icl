@@ -1,3 +1,6 @@
+// Matheus Amazonas Cabral de Andrade
+// s4605640
+
 module assignment10
 
 import Control.Applicative
@@ -6,13 +9,17 @@ import Data.Either
 import Data.List
 import Data.Maybe
 import StdBool
+import StdEnv
 import StdFunc
 import StdList 
 import StdString
 import StdTuple
 import GenPrint
+import StdDynamic
 from Data.Func import $
 import qualified Data.Map as Map
+
+// ----- Bimap -----
 
 :: BM a b = { t :: a -> b, f :: b -> a}
 
@@ -62,8 +69,8 @@ bm = {t = id, f = id}
 
 // ----- State -----
 
-:: State :== 'Map'.Map String (Either Int [Int])
-:: Sem a = S (State -> (a, State))
+:: State :== 'Map'.Map String Dynamic
+:: Sem a = S (State -> (a, State)) 
 
 unS :: (Sem a) -> State -> (a, State)
 unS (S s) = s
@@ -80,29 +87,24 @@ instance Applicative Sem where
 instance Monad Sem where
   bind (S x) f = S $ \s -> let (v,ns) = x s in unS (f v) ns
 
-storeE :: Ident Int (BM a Int) -> Sem a
-storeE i v bm = S $ \s -> (bm.f v, 'Map'.put i (Left v) s)
+store :: Ident a (BM b a) -> Sem b | TC a
+store i v bm = S $ \s -> (bm.f v, 'Map'.put i (dynamic v) s)
 
-readE :: Ident -> Sem Int
-readE i = S $ \s -> case 'Map'.get i s of
-  Just (Left v) -> (v, s)
-  _ -> (0,s)
-
-storeS :: Ident [Int] (BM a [Int]) -> Sem a
-storeS i v bm = S $ \s -> (bm.f v, 'Map'.put i (Right v) s)
-
-readS :: Ident -> Sem [Int]
-readS i = S $ \s -> case 'Map'.get i s of
-  Just (Right v) -> (v, s)
-  _ -> ([],s)
+read :: Ident -> Sem a | TC a
+read i = S $ \s -> case 'Map'.get i s of
+    Just (v :: a^) = (v, s)
+    Just d = abort $ "Expected " +++ toString expType +++ " but got " +++ toString (typeCodeOfDynamic d)
+    Nothing = abort $ "Variable not found: " +++ i
+  where
+    expType = typeCodeOfDynamic (dynamic undef :: a^)
 
 // ----- Evaluation -----
 
 evalE :: (Expression a) -> Sem a
 evalE (New bm set) = pure $ bm.f set
 evalE (Elem bm ele) = pure $ bm.f ele
-evalE (VarElem bm var) = readE var >>= \v -> pure $ bm.f v
-evalE (VarSet bm var) = readS var >>= \v -> pure $ bm.f v
+evalE (VarElem bm var) = read var >>= \v -> pure $ bm.f v
+evalE (VarSet bm var) = read var >>= \v -> pure $ bm.f v
 evalE (Size bm eSet) = evalE eSet >>= \set -> pure $ bm.f $ length set
 evalE (Plus bm e1 e2) = evalE e1 >>= \x1 -> evalE e2 >>= \x2 -> pure $ bm.f $ x1+x2
 evalE (Union bm e1 e2) = evalE e1 >>= \s1 -> evalE e2 >>= \s2 -> pure $ bm.f $ union s1 s2
@@ -114,8 +116,8 @@ evalE (DiffE bm e1 e2) = evalE e1 >>= \s -> evalE e2 >>= \e -> pure $ bm.f $ dif
 evalE (Mult bm e1 e2) = evalE e1 >>= \x1 -> evalE e2 >>= \x2 -> pure $ bm.f $ x1*x2
 evalE (Inter bm e1 e2) = evalE e1 >>= \s1 -> evalE e2 >>= \s2 -> pure $ bm.f $ intersect s1 s2
 evalE (Scale bm ee se) = evalE ee >>= \e -> evalE se >>= \s -> pure $ bm.f $ map ((*)e) s
-evalE (AttElem bm i ee) = evalE ee >>= \e -> storeE i e bm
-evalE (AttSet bm i se) = evalE se >>= \s -> storeS i s bm
+evalE (AttElem bm i ee) = evalE ee >>= \e -> store i e bm
+evalE (AttSet bm i se) = evalE se >>= \s -> store i s bm
 
 evalL :: Logical -> Sem Bool
 evalL TRUE = pure True
@@ -128,7 +130,7 @@ evalL (e1 ||. e2) = evalL e1 >>= \b1 -> evalL e2 >>= \b2 -> pure $ b1 || b2
 evalL (e1 &&. e2) = evalL e1 >>= \b1 -> evalL e2 >>= \b2 -> pure $ b1 && b2
 
 evalS :: Stmt -> Sem ()
-evalS (Logical _) = pure () // I don't understand why there's a Logical construsctor for Stmt
+evalS (Logical _) = pure () // I don't understand why there's a Logical constructor for Stmt
 evalS (Expression e) = evalE e >>| pure ()
 evalS (If p s1 s2) = evalL p >>= \b -> if b (evalS s1) (evalS s2) >>| pure ()
 evalS (es1 :. es2) = evalS es1 >>| evalS es2 >>| pure ()
@@ -137,7 +139,7 @@ evalS (For i eset stmt) = evalE eset >>= \set -> forEach i set stmt
     forEach :: Ident [Int] Stmt -> Sem ()
     forEach i set stmt = foldr (>>|) (pure ()) (map (exec stmt i) set)
     exec :: Stmt Ident Int -> Sem ()
-    exec stmt i v = storeE i v bm >>= \_ -> evalS stmt
+    exec stmt i v = store i v bm >>= \_ -> evalS stmt
 
 // ----- Printing -----
 
@@ -244,22 +246,30 @@ instance * Set where
 
 // ----- Start -----
 
-Start = eval $ If (lit 40 <=. lit 6) ("x" =. lit 4) ("y" =. lit 5)
+// The following functions solve the overloading problem when using "variable"
+set :: (Set -> Set)
+set = id
+
+element :: (Elem -> Elem)
+element = id
+
+Start = eval $ "x" =. lit 4 :. "y" =. lit 5 :. "z" =. element (var "x")
   where
     eval e = id $ (unS (evalS e)) 'Map'.newMap
 
-// ----- Question -----
+/*I tried to define a simulator on iTakss using the code below (with some extra
+  qualified imports) and it did run, but the fields for the bimap (f, t) can't
+  be defined (since it can't generate webforms for function types) and are simply
+  blank (just the field names, no values/selectors) in the webpage. So no, we 
+  can't define a simulator for this DSL using iTasks.
 
-//    Do I really need a constructor for every variation of overloaded
-// functions? Example: + (Mult, AddElemSet, AddSetElem, Union)
-//    The state might contain variables of Set and Elem. How to make 
-// reading a var from the state stactically typed? Either Int [Int]?
+Start w = 'IT'.startEngine home w
+  where
+    home :: 'IT'.Task (Expression Int)
+    home = 'IT'.enterInformation "Enter an expression" [] 
 
-// Big problem: 
-//    Start = eval $ "x" =. lit 4 :. "y" =. lit 5 :. "z" =. var "x"
-// Different keywords for each "var"? Maybe "set" and "num"?
-
-
+derive class iTask Expression, BM
+derive class Publishable Expression*/
 
 
 
