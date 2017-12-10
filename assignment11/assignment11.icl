@@ -4,6 +4,7 @@ import StdEnv
 import StdDynamic
 import Data.Map
 import Data.Either
+import Data.Tree
 import qualified Data.List as List
 from Data.Func import $
 
@@ -25,6 +26,9 @@ instance type Int where
 instance type Char where
 	type _ = "char"
 
+instance type [a] | type a where
+	type a = "[" +++ type a +++ "]"
+
 class expr v where
 	lit :: a -> v a Expr | type a
 	(+.) infixl 6 :: (v t p) (v t q) -> v t Expr | type, + t
@@ -38,15 +42,16 @@ class expr v where
 	(!=.) infix 4 :: (v a p) (v a q) -> v Bool Expr | ==, type a
 	// (!=.) x y :== ~. (x == y)
 	(>.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
-	// (>.) x y :== y <. x
+	// (>.) x y :== y <. xStart = show $ fac
 	(<=.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
-	// (<=.) x y :== ~. (y <. x)
+	// (<=.) x y :== ~. (y <. x)Start = show $ fac
 	(>=.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
 	// (>=.) x y :== ~. (x <. y)
 	(+=) infix 4 :: (v a p) (v [a] q) -> v [a] Expr 
 	(-=) infix 4 :: (v a p) (v [a] q) -> v [a] Expr 
+	sizeOf :: (v [a] p) -> v Int Expr
 	If :: (v Bool p) (v a q) (v b r) -> v () Expr 
-	While :: (v Bool p) (v a q) -> v () Expr
+	For :: (v [a] q) (v a Expr) -> v () Expr
 	(:.) infixr 1 :: (v a p) (v b q) -> v b Expr
 
 class var v where
@@ -77,7 +82,7 @@ fresh :: (Int -> (Show a p)) -> Show a p
 fresh f = Show $ \s -> unShow (f s.fresh) {s & fresh = inc s.fresh}
 
 freshVar :: ((Show b q) -> (Show a p)) -> (Show a p)
-freshVar f = fresh (f o \n -> show ("v " +++ toString n))
+freshVar f = fresh (f o \n -> show ("v" +++ toString n))
 
 ident :: Show a b
 ident = Show $ \s -> {s & ident = inc s.ident}
@@ -107,11 +112,14 @@ instance expr Show where
 	(<=.) x y = brac $ x +.+ show "<=" +.+ y
 	(+=) e s = e +.+ show " += " +.+ s
 	(-=) e s = e +.+ show " -= " +.+ s
+	sizeOf l = show "sizeOf(" +.+ l +.+ show ")"
 	If b then else = show "if " +.+ b +.+ show " {" +.+ ident +.+ nl
 		+.+ then +.+ unident +.+ nl +.+ show "} else {" +.+ ident +.+ nl
 		+.+ else +.+ unident +.+ nl +.+ show "}" +.+ nl
-	While b s = show "while " +.+ b +.+ show " {" +.+ ident +.+ nl
-		+.+ s +.+ unident +.+ nl +.+ show "}" +.+ nl
+	For s e = show "for"
+		// freshVar $ \v -> let (x in rest) = f v
+		// show "for " +.+ v +.+ show " in " +.+ s +.+ show "do {"
+		// +.+ ident +.+ nl +.+ e +.+ unident +.+ nl +.+ show "}" +.+ nl
 	(:.) e1 e2 = e1 +.+ show ";" +.+ nl +.+ e2 +.+ nl
 
 instance var Show where
@@ -120,46 +128,13 @@ instance var Show where
 		show (type x) +.+ show " " +.+ v +.+ show " = " +.+
 		show x +.+ show ";" +.+ nl +.+ rest
 
+fac = 
+	For (lit [1,2,3]) (var \x -> 0 In x *. (lit 2))
 
-	/*	lit :: a -> v a Expr | type a
-	(+.) infixl 6 :: (v t p) (v t q) -> v t Expr | type, + t
-	(-.) infixl 6 :: (v t p) (v t q) -> v t Expr | type, - t
-	(*.) infixl 6 :: (v t p) (v t q) -> v t Expr | type, * t
-	(&.) infixr 3 :: (v Bool p) (v Bool q) -> v Bool Expr
-	(|.) infixr 2 :: (v Bool p) (v Bool q) -> v Bool Expr
-	~. :: (v bool p) -> v Bool Expr
-	(==.) infix 4 :: (v a p) (v a q) -> v Bool Expr | ==, type a
-	(<.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
-	(!=.) infix 4 :: (v a p) (v a q) -> v Bool Expr | ==, type a
-	(!=.) x y :== ~. (x == y)
-	(>.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
-	(>.) x y :== y <. x
-	(<=.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
-	(<=.) x y :== ~. (y <. x)
-	(>=.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
-	(>=.) x y :== ~. (x <. y)
-	If :: (v Bool p) (v a q) (v b r) -> v () Expr 
-	While :: (v Bool p) (v a q) -> v () Expr
-	(:.) infixr 1 :: (v a p) (v b q) -> v b Expr*/
-
-
-
-
-/*
-(&.) infixr 3 :: (v Bool p) (v Bool q) -> v Bool Expr
-	(|.) infixr 2 :: (v Bool p) (v Bool q) -> v Bool Expr
-	~. :: (v bool p) -> v Bool Expr
-	(==.) infix 4 :: (v a p) (v a q) -> v Bool Expr | ==, type a
-	(<.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
-	(!=.) infix 4 :: (v a p) (v a q) -> v Bool Expr | ==, type a
-	(!=.) x y :== ~. (x == y)
-	(>.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
-	(>.) x y :== y <. x
-	(<=.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
-	(<=.) x y :== ~. (y <. x)
-	(>=.) infix 4 :: (v a p) (v a q) -> v Bool Expr | <, Ord, type a
-	(>=.) x y :== ~. (x <. y)
-*/	
+Start = let result = (unShow fac) zero in
+		(uni o reverse) result.print
+	where 
+		uni ss = foldl (+++) "" ss
 
 // -------- Eval --------
 
@@ -177,4 +152,3 @@ instance - [a] | == a where
 instance * [a] | == a where
 	* l1 l2 = 'List'.intersect l1 l2
 
-Start = 1
