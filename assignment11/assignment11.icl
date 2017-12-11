@@ -1,3 +1,6 @@
+// Matheus Amazonas Cabral de Andrade
+// s4605640
+
 module assignment11 
 
 import StdString
@@ -31,6 +34,12 @@ instance type Char where
 instance type [a] | type a where
 	type a = "[" +++ type a +++ "]"
 
+instance type () where 
+	type _ = "()"
+
+instance toString () where
+	toString _ = "()"
+
 class expr v where
 	lit :: a -> v a Expr | type a
 	(+.) infixl 6 :: (v t p) (v t q) -> v t Expr | type, + t
@@ -49,7 +58,7 @@ class expr v where
 	(-=) infix 4 :: (v a p) (v [a] q) -> v [a] Expr | == a
 	sizeOf :: (v [a] p) -> v Int Expr
 	If :: (v Bool p) (v a q) (v b r) -> v () Expr 
-	// For :: (In (v t Upd) (v [t] q)) (v a Expr) -> v () Expr
+	For :: (v [t] q) ((v t Upd) -> In t (v a p)) -> v () Expr | type t
 	(:.) infixr 1 :: (v a p) (v b q) -> v b Expr
 
 class var v where
@@ -124,10 +133,9 @@ instance expr Show where
 	If b then else = show "if " +.+ b +.+ show " {" +.+ ident +.+ nl
 		+.+ then +.+ unident +.+ nl +.+ show "} else {" +.+ ident +.+ nl
 		+.+ else +.+ unident +.+ nl +.+ show "}" +.+ nl
-	// For (In x s) e = show "for"
-		// freshVar $ \v -> let (x in rest) = f v
-		// show "for " +.+ v +.+ show " in " +.+ s +.+ show "do {"
-		// +.+ ident +.+ nl +.+ e +.+ unident +.+ nl +.+ show "}" +.+ nl
+	For s f = freshVar $ \v -> let (x In rest) = f v in
+		show "for " +.+ v +.+ show " in " +.+ s +.+ show " do {"
+		+.+ ident +.+ nl +.+ rest +.+ unident +.+ nl +.+ show "}"
 	(:.) e1 e2 = e1 +.+ show ";" +.+ nl +.+ e2 +.+ nl
 
 instance var Show where
@@ -196,10 +204,12 @@ instance expr Eval where
 	If b then else = b >>- \c -> if c 
 		(then >>- \_ -> rtrn ())
 		(else >>- \_ -> rtrn ())
-	// For s e = show "for"
-	// 	// freshVar $ \v -> let (x in rest) = f v
-	// 	// show "for " +.+ v +.+ show " in " +.+ s +.+ show "do {"
-	// 	// +.+ ident +.+ nl +.+ e +.+ unident +.+ nl +.+ show "}" +.+ nl
+	// I didn't have time to figure the for evaluation. My attempt is commented below.
+	For s f = s >>- \set -> rtrn ()
+	// For s f = Eval \r st -> let (x In (Eval rest)) = f (Eval (rwvar s.vars)) in 
+	// 							case unEval s R st of
+	// 								(Right set, ns) = foldl (\s e -> x =. e :. rest) (Right (), ns) set
+	// 								(Left e, _) = (Left e, st)
 	(:.) e1 e2 = e1 >>- \_ -> toExpr e2
 		where
 			toExpr :: (Eval t p) -> Eval t Expr
@@ -234,7 +244,12 @@ test =
 	var \o = [1,2,3] In
 	e 
 
-Start = eval test
+test2 = For (lit [1,2,3]) (\x = 1 In x =. x *. lit 2) 
+
+prettyPrint :: (Show a p) -> [String]
+prettyPrint (Show f) = let result = f zero in reverse result.print
+
+Start = prettyPrint test2
 
 
 
