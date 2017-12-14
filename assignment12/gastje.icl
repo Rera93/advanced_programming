@@ -10,7 +10,7 @@ implementation module gastje
 	Execute with "Basic values only" option
 */
 
-import StdEnv, StdGeneric, GenEq
+import StdEnv, StdGeneric, GenEq, Data.Eq, StdMaybe
 
 test :: p -> [String] | prop p
 test p = check 1000 (holds p prop0)
@@ -22,6 +22,8 @@ check n [p:x] | p.bool
 	= check (n-1) x
 	= ["Fail for: ":reverse ["\n":p.info]]
 
+(For) infix 6 :: (a->b) [a] -> ((a->b),[a]) | testArg a
+(For) p as = (p, as)
 class prop a where holds :: a Prop -> [Prop]
 
 instance prop Bool where holds b p = [{p & bool = b}]
@@ -30,6 +32,10 @@ instance prop Bool where holds b p = [{p & bool = b}]
 instance prop (a->b) | prop b & testArg a 
 where
 	holds f p = diagonal [holds (f a) {p & info = [" ",string{|*|} a:p.info]} \\ a <- gen{|*|}]
+
+instance prop ((a->b),[a]) | prop b & testArg a
+where
+	holds (f, as) p = diagonal [holds (f a) {p & info = [" ",string{|*|} a:p.info]} \\ a <- as]
 
 class testArg a | gen{|*|}, string{|*|}, gEq{|*|} a 
 
@@ -89,3 +95,8 @@ where
 	rev []    accu = accu
 	rev [x:r] accu = rev r [x:accu]
 
+pChar c = isAlpha c || toUpper c == c
+pUpper :: Char -> Bool
+pUpper c = c /= toUpper c
+
+Start = ["toUpper: ": test (pUpper For ['a'..'z'])]
