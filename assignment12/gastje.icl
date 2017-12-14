@@ -10,7 +10,7 @@ implementation module gastje
 	Execute with "Basic values only" option
 */
 
-import StdEnv, StdGeneric, GenEq, Data.Eq, StdMaybe
+import StdEnv, StdGeneric, GenEq, Data.Eq, Data.Maybe, StdOverloaded
 
 test :: p -> [String] | prop p
 test p = check 1000 (holds p prop0)
@@ -22,8 +22,12 @@ check n [p:x] | p.bool
 	= check (n-1) x
 	= ["Fail for: ":reverse ["\n":p.info]]
 
-(For) infix 6 :: (a->b) [a] -> ((a->b),[a]) | testArg a
+(For) infix 6 :: (a->b) [a] -> ((a->b),[a]) | prop b & testArg a
 (For) p as = (p, as)
+
+(==>) infix 5 :: Bool Bool -> Maybe Bool
+(==>) a b = if a (Just b) Nothing
+
 class prop a where holds :: a Prop -> [Prop]
 
 instance prop Bool where holds b p = [{p & bool = b}]
@@ -37,7 +41,9 @@ instance prop ((a->b),[a]) | prop b & testArg a
 where
 	holds (f, as) p = diagonal [holds (f a) {p & info = [" ",string{|*|} a:p.info]} \\ a <- as]
 
-class testArg a | gen{|*|}, string{|*|}, gEq{|*|} a 
+instance prop (Maybe Bool) where
+	holds (Just b) p = [{p & bool = b}]
+	holds _ p = [p]
 
 :: Prop =
 	{ bool :: Bool
@@ -99,4 +105,15 @@ pChar c = isAlpha c || toUpper c == c
 pUpper :: Char -> Bool
 pUpper c = c /= toUpper c
 
-Start = ["toUpper: ": test (pUpper For ['a'..'z'])]
+pTest :: Int -> Bool
+pTest 0 = False
+pTest n 
+	| isEven n = True
+	| otherwise = False
+
+Start = ["pUpper: lower": test (\n -> (isEven n && isNotzero n) ==> pTest n)]
+	where
+		isNotzero 0 = False
+		isNotzero _ = True
+
+
