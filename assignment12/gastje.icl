@@ -25,8 +25,11 @@ check n [p:x] | p.bool
 (For) infix 6 :: (a->b) [a] -> ((a->b),[a]) | prop b & testArg a
 (For) p as = (p, as)
 
-(==>) infix 5 :: Bool Bool -> Maybe Bool
+(==>) infix 1 :: Bool b -> Maybe b
 (==>) a b = if a (Just b) Nothing
+
+(=.=) infix 5 :: a a -> Prop | testArg a
+(=.=) a b = {bool = gEq{|*|} a b, info = [ string{|*|} a, " =.=: ", string{|*|} b]}
 
 class prop a where holds :: a Prop -> [Prop]
 
@@ -41,9 +44,14 @@ instance prop ((a->b),[a]) | prop b & testArg a
 where
 	holds (f, as) p = diagonal [holds (f a) {p & info = [" ",string{|*|} a:p.info]} \\ a <- as]
 
-instance prop (Maybe Bool) where
-	holds (Just b) p = [{p & bool = b}]
+instance prop (Maybe a) | prop a
+where
+	holds (Just b) p = holds b p
 	holds _ p = [p]
+
+instance prop Prop 
+where
+	holds p1 p2 = [{p2 & bool = p1.bool && p2.bool, info = p2.info ++ p1.info}]
 
 :: Prop =
 	{ bool :: Bool
@@ -101,9 +109,17 @@ where
 	rev []    accu = accu
 	rev [x:r] accu = rev r [x:accu]
 
+fac :: Int -> Int
+fac 7 = 1
+fac n
+	| n <= 0 = 1
+	| otherwise = n * fac (n-1)
+
 pChar c = isAlpha c || toUpper c == c
 pUpper :: Char -> Bool
 pUpper c = c /= toUpper c
+
+pfac i = abs i < 10 ==> prod [1..i] =.= fac i
 
 pTest :: Int -> Bool
 pTest 0 = False
@@ -111,9 +127,11 @@ pTest n
 	| isEven n = True
 	| otherwise = False
 
-Start = ["pUpper: lower": test (\n -> (isEven n && isNotzero n) ==> pTest n)]
-	where
-		isNotzero 0 = False
-		isNotzero _ = True
+Start = ["pfac: ":test pfac]
+
+// Start = ["pUpper: lower": test (\n -> (isEven n && isNotzero n) ==> pTest n)]
+// 	where
+// 		isNotzero 0 = False
+// 		isNotzero _ = True
 
 
