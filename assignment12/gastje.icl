@@ -1,3 +1,6 @@
+// Matheus Amazonas Cabral de Andrade
+// s4605640
+
 implementation module gastje
 
 /*
@@ -11,6 +14,7 @@ implementation module gastje
 */
 
 import StdEnv, StdGeneric, GenEq, Data.Eq, Data.Maybe, StdOverloaded
+import cashModel
 
 test :: p -> [String] | prop p
 test p = check 1000 (holds p prop0)
@@ -109,29 +113,66 @@ where
 	rev []    accu = accu
 	rev [x:r] accu = rev r [x:accu]
 
-fac :: Int -> Int
-fac 7 = 1
-fac n
-	| n <= 0 = 1
-	| otherwise = n * fac (n-1)
+// ---------- Cash Model ----------
 
-pChar c = isAlpha c || toUpper c == c
-pUpper :: Char -> Bool
-pUpper c = c /= toUpper c
+derive gen Euro, Action, Product, []
+derive string Euro, Action, Product, []
+derive bimap []
+derive gEq Action, Product
 
-pfac i = abs i < 10 ==> prod [1..i] =.= fac i
+// --- Euro properties ---
 
-pTest :: Int -> Bool
-pTest 0 = False
-pTest n 
-	| isEven n = True
-	| otherwise = False
+pAlwaysConvertAdd e1 e2 = let s = e1 + e2 in s.cent < 100
+// output: Passed
 
-Start = ["pfac: ":test pfac]
+pAlwaysConvertSub e1 e2 = let s = e1 - e2 in s.cent < 100
+// output: Passed
 
-// Start = ["pUpper: lower": test (\n -> (isEven n && isNotzero n) ==> pTest n)]
-// 	where
-// 		isNotzero 0 = False
-// 		isNotzero _ = True
+pSignal e = case sign e.euro of
+	1  = sign e.cent /= -1
+	-1 = sign e.cent /= 1
+	otherwise = True
+// output: Fail for euro = -1, cent = 1
 
+pTotalAdd e1 e2 = let s = e1 + e2 in toCent s =.= toCent e1 + toCent e2
+	where
+		toCent e = e.euro * 100 + e.cent
+// output: Fail for {euro = 0, cent = 0} + {euro = 0, cent = 1}
+// =.= output: 1 =.= 0
+
+pTotalSub e1 e2 = let s = e1 - e2 in toCent s =.= toCent e1 - toCent e2
+	where
+		toCent e = e.euro * 100 + e.cent
+// output: Fail for {euro = 0, cent = 0} + {euro = 0, cent = 1}
+// =.= output: -1 =.= 0
+
+pAsso :: Euro Euro Euro -> Prop
+pAsso e1 e2 e3 = e1 + (e2 + e3) =.= (e1 + e2) + e3
+// output: Fail for {euro = 1, cent = -1} {euro = 0, cent = 0}, {euro = 0, cent = 0}
+// =.= output: {euro = 0, cent = 0} =.= {euro = 0, cent = 99}
+
+pInv e = case sign e.euro of
+	1  = sign (~e).euro =.= -1 
+	-1 = sign (~e).euro =.= 1
+	0  = sign (~e).euro =.= 0
+// output: Fail for {euro = -9223372036854775808, cent = 0}
+// =.= output: 1 =.= -1
+
+// --- Remove action properties ---
+
+pTotalPositive ps a = total.euro >= 0 && total.cent >= 0
+	where
+		total = sum (snd (model ps a))
+// output: Fail for [] (Rem Cola)
+
+pRemoved :: [Product] Action Product -> Prop
+pRemoved ps a p = total (prods ps a) (Rem p) =.= total ps a - euro p
+	where 
+		total x y = sum (snd (model x y))
+		prods x y = fst (model x y)
+// output: Fail for [] Pay Cola
+// =.= output: {euro = -1, cent = 0} =.= {euro = 0, cent = 0}
+
+
+Start = test pRemoved
 
