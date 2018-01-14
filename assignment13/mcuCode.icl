@@ -89,9 +89,6 @@ instance expr Code where
 	If b then else = show "if (" +.+ b +.+ show ") {" +.+ ident +.+ nl
 		+.+ then +.+ unident +.+ nl +.+ show "} else {" +.+ ident +.+ nl
 		+.+ else +.+ unident +.+ nl +.+ show "}" +.+ nl
-	For s f = freshVar $ \v -> let (x In rest) = f v in
-		show "for " +.+ v +.+ show " in " +.+ s +.+ show " do {"
-		+.+ ident +.+ nl +.+ rest +.+ unident +.+ nl +.+ show "}"
 	(:.) e1 e2 = e1 +.+ show ";" +.+ nl +.+ e2 +.+ nl
 	
 instance var Code where
@@ -105,6 +102,7 @@ instance var Code where
 
 instance button Code where
 	isPressed b = show "isPressed(" +.+ show b +.+ show ")"
+	pressed b = show ""
 
 concat :: [String] -> String
 concat [] = ""
@@ -127,6 +125,7 @@ compile f = concat $ let r = (unCode final) zero in (reverse r.include) ++ (reve
 			+.+ unident +.+ nl +.+ show "}" +.+ nl +.+ nl +.+ restoreArea
 		loop = setArea Loop +.+ nl
 			+.+ show "void loop() {" +.+ ident +.+ nl 
+			+.+ show "lcd.setCursor(0, 0);" +.+ nl
 		isPressCode = show "boolean isPressed (int button){" +.+ ident +.+ nl
 			+.+ show "int val = analogRead(A0);" +.+ nl
 			+.+ show "for (int i = 0; i <= KEY_COUNT; i += 1) {" +.+ ident +.+ nl

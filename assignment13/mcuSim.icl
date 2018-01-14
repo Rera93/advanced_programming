@@ -5,10 +5,14 @@ implementation module mcuSim
 
 import mcuSim
 import Data.Eq
+import iTasks
 import qualified Data.List as List
+from Data.Func import $
+
+derive class iTask State, Button
 
 instance zero State where
-	zero = {map = newMap, vars = 0, buttons = newMap}
+	zero = {map = [(0,dynamic 2)], vars = 0, buttons = [(B1,False), (B2,False), (B3,False), (B4,False), (B5, False)]}
 
 unEval :: (Eval a p) -> (RW a) State -> (Either String a, State)
 unEval (Eval f) = f
@@ -34,11 +38,11 @@ rtrn a = Eval \r s -> (Right a, s)
 (<*.>) f a = f >>- \g -> a >>- \b -> rtrn (g b)
 
 rwvar :: Int (RW a) State -> (Either String a, State) | TC a
-rwvar n R s = case get n s.map of
+rwvar n R s = case getM n s.map of
 	Just (v :: a^) = (Right v, s)
 	Just _ = (Left (toString n + " wrong type"), s)
 	_ = (Left (toString n + " undefined"), s)
-rwvar n (W a) s = (Right a, { s & map = put n (dynamic a) s.map })
+rwvar n (W a) s = (Right a, { s & map = putM n (dynamic a) s.map })
 
 instance expr Eval where
 	lit a = rtrn a
@@ -60,12 +64,6 @@ instance expr Eval where
 	If b then else = b >>- \c -> if c 
 		(then >>- \_ -> rtrn ())
 		(else >>- \_ -> rtrn ())
-	// I didn't have time to figure the for evaluation. My attempt is commented below.
-	For s f = s >>- \set -> rtrn ()
-	// For s f = Eval \r st -> let (x In (Eval rest)) = f (Eval (rwvar s.vars)) in 
-	// 							case unEval s R st of
-	// 								(Right set, ns) = foldl (\s e -> x =. e :. rest) (Right (), ns) set
-	// 								(Left e, _) = (Left e, st)
 	(:.) e1 e2 = e1 >>- \_ -> toExpr e2
 		where
 			toExpr :: (Eval t p) -> Eval t Expr
@@ -75,15 +73,18 @@ instance var Eval where
 	(=.) v e = e >>- \a -> Eval \r s -> unEval v (W a) s
 	var f = Eval \r s -> let (x In (Eval rest)) = f (Eval (rwvar s.vars))
 						 in rest R {s & vars = inc s.vars,
-									map = put s.vars (dynamic x) s.map}
+									map = putM s.vars (dynamic x) s.map}
 	global f = Eval \r s -> let (x In (Eval rest)) = f (Eval (rwvar s.vars))
 						 in rest R {s & vars = inc s.vars,
-									map = put s.vars (dynamic x) s.map}
+									map = putM s.vars (dynamic x) s.map}
 
 instance button Eval where
-	isPressed b = Eval \_ s -> case get b s.buttons of
+	isPressed b = Eval \_ s -> case getM b s.buttons of
 		Nothing = (Left ("Can't find button " + toString b), s)
 		Just v = (Right v, s)
+	pressed b = Eval \_ s -> case getM b s.buttons of
+		Nothing = (Left ("Can't find button " + toString b), s)
+		Just _ = (Right b, {s & buttons = putM b False s.buttons})
 
 print :: [a] -> String | toString a 
 print l = "[" + show l + "]"
@@ -93,19 +94,7 @@ print l = "[" + show l + "]"
 		show [a] = toString a
 		show [a:as] = toString a + "," + show as
 
-eval :: (Eval a p) -> [String] | type a
-eval (Eval f) = let (r, s) = f R zero in
-		case r of
-			Right a = [toString a, printState s]
-			Left e = ["Error:",e,"\n"]
-	where
-		printState :: State -> String
-		printState {map} = foldrWithKey (\k v a -> a + printVar k v) "" map
-		printVar :: Int Dynamic -> String 
-		printVar k (v :: Int) = "(" + toString k + ":" + toString v + ")"
-		printVar k (v :: Char) = "(" + toString k + ":" + toString v + ")"
-		printVar k (v :: Bool) = "(" + toString k + ":" + toString v + ")"
-		printVar k (v :: [Int]) = "(" + toString k + ":" + print v + ")"	// List's instance of toString isn't the best
-		printVar k (v :: [Char]) = "(" + toString k + ":" + print v + ")"
-		printVar k (v :: [Bool]) = "(" + toString k + ":" + print v + ")"
-		printVar k (v :: a) = "unknown type variable"
+eval :: (Eval a p) -> State | type a
+eval (Eval f) = snd $ f R zero 
+
+

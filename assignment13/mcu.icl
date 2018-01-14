@@ -8,11 +8,19 @@ import StdString
 
 
 instance toString Button where
-	toString B1 = "B1"
-	toString B2 = "B2"
-	toString B3 = "B3"
-	toString B4 = "B4"
-	toString B5 = "B5"
+	toString B1 = "0"
+	toString B2 = "1"
+	toString B3 = "2"
+	toString B4 = "3"
+	toString B5 = "4"
+
+instance == Button where
+	(==) B1 B1 = True
+	(==) B2 B2 = True
+	(==) B3 B3 = True
+	(==) B4 B4 = True
+	(==) B5 B5 = True
+	(==) _ _ = False
 
 instance < Button where
 	(<) B1 _  = True

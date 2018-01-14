@@ -23,11 +23,24 @@ void setup() {
 
 
 void loop() {
-  int v2 = 56;
-  if (isPressed(B1)) {
+  if (isPressed(0)) {
     v0 = (v0+1)
   } else {
     
   }
+  ;
+  if (isPressed(1)) {
+    v1 = (v1+1)
+  } else {
+    
+  }
+  ;
+  if (isPressed(2)) {
+    v0 = 0
+  } else {
+    
+  }
+  
+  
   
 }

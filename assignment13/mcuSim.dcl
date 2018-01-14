@@ -4,18 +4,22 @@
 definition module mcuSim
 
 import mcu
-import StdEnv
-import Data.Map
 import Data.Either
+from Data.Map import :: Map
+import qualified Data.Map as M
+import iTasks
+import util
 
 :: Eval a p = Eval ((RW a) State -> (Either String a, State))
 :: RW a = R | W a
-:: State = { map :: Map Int Dynamic,
+:: State = { map :: MyMap Int Dynamic,
 			 vars :: Int,
-			 buttons :: Map Button Bool}
+			 buttons :: MyMap Button Bool}
 
 instance expr Eval
 instance var Eval
 instance button Eval 
 
-eval :: (Eval a p) -> [String] | type a
+instance zero State
+
+eval :: (Eval a p) -> State | type a

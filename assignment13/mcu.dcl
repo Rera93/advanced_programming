@@ -32,7 +32,6 @@ class expr v where
 	(-=) infix 4 :: (v a p) (v [a] q) -> v [a] Expr | == a
 	sizeOf :: (v [a] p) -> v Int Expr
 	If :: (v Bool p) (v a q) (v b r) -> v () Expr 
-	For :: (v [t] q) ((v t Upd) -> In t (v a p)) -> v () Expr | type t
 	(:.) infixr 1 :: (v a p) (v b q) -> v b Expr
 
 class var v where
@@ -42,8 +41,10 @@ class var v where
 
 class button v where
 	isPressed :: Button -> v Bool Expr
+	pressed :: Button -> v Button Expr
 
 instance toString Button 
+instance == Button
 instance < Button 
 instance type Bool
 instance type Int
