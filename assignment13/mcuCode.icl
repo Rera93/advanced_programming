@@ -89,10 +89,10 @@ instance expr Code where
 	If b then else = show "if (" +.+ b +.+ show ") {" +.+ ident +.+ nl
 		+.+ then +.+ unident +.+ nl +.+ show "} else {" +.+ ident +.+ nl
 		+.+ else +.+ unident +.+ nl +.+ show "}" +.+ nl
-	(:.) e1 e2 = e1 +.+ show ";" +.+ nl +.+ e2 +.+ nl
+	(:.) e1 e2 = e1 +.+ nl +.+ e2 +.+ nl
 	
 instance var Code where
-	(=.) v e = v +.+ show " = " +.+ e
+	(=.) v e = v +.+ show " = " +.+ e +.+ show ";"
 	var f = freshVar $ \v -> let (x In rest) = f v in
 		show (type x) +.+ show " " +.+ v +.+ show " = " +.+
 		show x +.+ show ";" +.+ nl +.+ rest
@@ -130,9 +130,10 @@ compile f = concat $ let r = (unCode final) zero in (reverse r.include) ++ (reve
 			+.+ show "int val = analogRead(A0);" +.+ nl
 			+.+ show "for (int i = 0; i <= KEY_COUNT; i += 1) {" +.+ ident +.+ nl
 			+.+ show "if (val < keyLimits[i] && i == button) {" +.+ ident +.+ nl
-			+.+ show "return True;" +.+ unident +.+ nl
+			+.+ show "return true;" +.+ unident +.+ nl
 			+.+ show "}" +.+ unident +.+ nl
-			+.+ show "return false" +.+ unident +.+ nl
+			+.+ show "}" +.+ unident +.+ nl
+			+.+ show "return false;" +.+ unident +.+ nl
 			+.+ show "}" +.+ nl +.+ nl
 
 
