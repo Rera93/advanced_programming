@@ -1,0 +1,33 @@
+#include <LiquidCrystal.h>
+#define KEY_COUNT 5
+
+int keyLimits [KEY_COUNT+1] = {50, 190, 380, 555, 790, 1024};
+char keyNames [KEY_COUNT+1] [10] = {"Right ", "Up ", "Down " , "Left " , "Select" , "No key"};
+LiquidCrystal lcd = LiquidCrystal(8, 9, 4, 5, 6, 7);
+
+boolean isPressed (int button){
+  int val = analogRead(A0);
+  for (int i = 0; i <= KEY_COUNT; i += 1) {
+    if (val < keyLimits[i] && i == button) {
+      return True;
+    }
+  return false
+}
+
+int v0 = 0;
+int v1 = 0;
+
+void setup() {
+  lcd.begin(16,2);
+}
+
+
+void loop() {
+  int v2 = 56;
+  if (isPressed(B1)) {
+    v0 = (v0+1)
+  } else {
+    
+  }
+  
+}

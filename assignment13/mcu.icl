@@ -36,22 +36,15 @@ instance type Int where
 instance type Char where
 	type _ = "char"
 
-instance type [a] | type a where
-	type a = "[" +++ type a +++ "]"
+instance type [Int] where
+	type _ = "[int]"
 
 instance type () where 
 	type _ = "()"
 
 instance toString () where
-	toString _ = "()"
+	toString _ = ""
 
 instance + String where
 	+ s1 s2 = s1 +++ s2
 
-print :: [a] -> String | toString a 
-print l = "[" + show l + "]"
-	where
-		show :: [a] -> String | toString a
-		show [] = ""
-		show [a] = toString a
-		show [a:as] = toString a + "," + show as

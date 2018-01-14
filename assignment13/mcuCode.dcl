@@ -6,9 +6,18 @@ definition module mcuCode
 import mcu
 
 :: Code a p = Code (CodeState -> CodeState)
-:: CodeState = { fresh :: Int,
-				 ident :: Int,
-				 print :: [String]}
+:: CodeArea = Include | Global | Setup | Loop
+:: CodeState = { area :: CodeArea,
+				 lastArea :: CodeArea,
+				 fresh :: Int,
+				 identI :: Int,
+				 include :: [String],
+				 identG :: Int,
+				 global :: [String],
+				 identS :: Int,
+				 setup :: [String],
+				 identL :: Int,
+				 loop :: [String]}
 
 instance expr Code 
 instance var Code 
@@ -16,4 +25,4 @@ instance button Code
 
 instance zero CodeState
 
-prettyPrint :: (Code a p) -> [String]
+compile :: (Code a p) -> String

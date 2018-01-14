@@ -38,6 +38,7 @@ class expr v where
 class var v where
 	(=.) infixr 2 :: (v t Upd) (v t p) -> v t Expr | type t 
 	var :: ((v t Upd) -> In t (v a p)) -> v a p | type t
+	global :: ((v t Upd) -> In t (v a p)) -> v a p | type t
 
 class button v where
 	isPressed :: Button -> v Bool Expr
@@ -47,9 +48,7 @@ instance < Button
 instance type Bool
 instance type Int
 instance type Char
-instance type [a] | type a
+instance type [Int]
 instance type ()
 instance toString ()
 instance + String 
-
-print :: [a] -> String | toString a 

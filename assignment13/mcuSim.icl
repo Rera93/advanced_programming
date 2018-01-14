@@ -76,11 +76,22 @@ instance var Eval where
 	var f = Eval \r s -> let (x In (Eval rest)) = f (Eval (rwvar s.vars))
 						 in rest R {s & vars = inc s.vars,
 									map = put s.vars (dynamic x) s.map}
+	global f = Eval \r s -> let (x In (Eval rest)) = f (Eval (rwvar s.vars))
+						 in rest R {s & vars = inc s.vars,
+									map = put s.vars (dynamic x) s.map}
 
 instance button Eval where
 	isPressed b = Eval \_ s -> case get b s.buttons of
 		Nothing = (Left ("Can't find button " + toString b), s)
 		Just v = (Right v, s)
+
+print :: [a] -> String | toString a 
+print l = "[" + show l + "]"
+	where
+		show :: [a] -> String | toString a
+		show [] = ""
+		show [a] = toString a
+		show [a:as] = toString a + "," + show as
 
 eval :: (Eval a p) -> [String] | type a
 eval (Eval f) = let (r, s) = f R zero in
