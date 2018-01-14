@@ -1,0 +1,20 @@
+Matheus Amazonas Cabral de Andrade (s4605640)
+
+I wanted to give this assignment a try (it seemed like the most interesting one so far) and 
+I underestimated its complexity. I wish I had more time to work on it and maybe export to a 
+real Arduino. I focused on C code generation (because it was something new to me) and I 
+neglected the simulator, which doesn't work yet. 
+
+I chose the EDSL with type classes approach because it guarantees some of the requirements I
+chose to implement: strong typing, the compiler checks variables in the DSL, I avoid the usage
+of GADTs (I don't like the poor man's GADTs with so many bimaps), it's easily extendable (new 
+views) and I really like the syntax. Therefore, I chose assignment 11 as a start point and to
+be honest, I think it was a good choice.
+
+I got as far as implementing reading the button states, printing on the LCD and running periodic
+code. I didn't start on creating multiple tasks, but I got to the point where I can define 
+periodic code to run (multiple blocks of it), so I beliebe the leap from that point to separate 
+tasks is quite small (correct me if I'm wrong). Following the advice and the requirements, I set 
+timers in a if block to run each periodic block. This solution isn't blocking and allows multiple
+blocks to be defined.
+

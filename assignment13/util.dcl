@@ -1,3 +1,6 @@
+// Matheus Amazonas Cabral de Andrade
+// s4605640
+
 definition module util
 
 import Data.Maybe
