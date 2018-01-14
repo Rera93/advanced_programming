@@ -12,11 +12,10 @@ boolean isPressed (int button){
       return true;
     }
   }
-return false;
+  return false;
 }
 
 int v0 = 0;
-int v1 = 0;
 
 void setup() {
   lcd.begin(16,2);
@@ -25,24 +24,8 @@ void setup() {
 
 void loop() {
   lcd.setCursor(0, 0);
-  if (isPressed(0)) {
-    v0 = (v0+1);
-  } else {
-    lcd.print("button b1 not pressed");
+  if (millis() - 5 > v0) {
+    lcd.print("Hello");
+    v0 += 5;
   }
-  
-  if (isPressed(1)) {
-    v1 = (v1+1);
-  } else {
-    lcd.print("button b2 not pressed");
-  }
-  
-  if (isPressed(2)) {
-    v0 = 0;
-  } else {
-    lcd.print("button b3 not pressed");
-  }
-  
-  
-  
 }

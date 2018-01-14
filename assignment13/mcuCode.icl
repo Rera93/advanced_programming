@@ -90,6 +90,9 @@ instance expr Code where
 		+.+ then +.+ unident +.+ nl +.+ show "} else {" +.+ ident +.+ nl
 		+.+ else +.+ unident +.+ nl +.+ show "}" +.+ nl
 	(:.) e1 e2 = e1 +.+ nl +.+ e2 +.+ nl
+	periodic c e1 e2 = show "if (millis() - " +.+ e1 +.+ show " > " +.+ c +.+ show") {" +.+ ident +.+ nl
+		+.+ e2 +.+ nl
+		+.+ c +.+ show " += " +.+ e1 +.+ show ";" +.+ unident +.+ nl +.+ show "}" 
 	
 instance var Code where
 	(=.) v e = v +.+ show " = " +.+ e +.+ show ";"
@@ -135,7 +138,7 @@ compile f = concat $ let r = (unCode final) zero in (reverse r.include) ++ (reve
 			+.+ show "if (val < keyLimits[i] && i == button) {" +.+ ident +.+ nl
 			+.+ show "return true;" +.+ unident +.+ nl
 			+.+ show "}" +.+ unident +.+ nl
-			+.+ show "}" +.+ unident +.+ nl
+			+.+ show "}" +.+ nl
 			+.+ show "return false;" +.+ unident +.+ nl
 			+.+ show "}" +.+ nl +.+ nl
 

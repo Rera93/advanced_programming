@@ -68,6 +68,7 @@ instance expr Eval where
 		where
 			toExpr :: (Eval t p) -> Eval t Expr
 			toExpr (Eval f) = Eval f
+	periodic _ _ e2 = e2
 
 instance var Eval where
 	(=.) v e = e >>- \a -> Eval \r s -> unEval v (W a) s

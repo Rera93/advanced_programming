@@ -33,6 +33,7 @@ class expr v where
 	sizeOf :: (v [a] p) -> v Int Expr
 	If :: (v Bool p) (v a q) (v b r) -> v () Expr 
 	(:.) infixr 1 :: (v a p) (v b q) -> v b Expr
+	periodic :: (v t Upd) (v Int p) (v a q) -> v a q
 
 class var v where
 	(=.) infixr 2 :: (v t Upd) (v t p) -> v t Expr | type t 

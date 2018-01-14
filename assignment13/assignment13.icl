@@ -26,6 +26,10 @@ test1 =
 		(p1 =. lit 0)
 		(print "button b3 not pressed") 
 
+test2 = 
+	global \lastT = 0 In
+	periodic lastT (lit 5) (print "Hello")
+
 
 writeToFile :: String *Files -> *Files
 writeToFile c files 
@@ -38,7 +42,7 @@ writeToFile c files
 
 // C code generation
 
-Start world = appFiles (writeToFile (compile test1)) world
+Start world = appFiles (writeToFile (compile test2)) world
 
 
 // Simulation - not working 
