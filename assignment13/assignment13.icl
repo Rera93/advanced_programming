@@ -65,6 +65,9 @@ class var v where
 	(=.) infixr 2 :: (v t Upd) (v t p) -> v t Expr | type t 
 	var :: ((v t Upd) -> In t (v a p)) -> v a p | type t
 
+class button v where
+	isPressed :: Button -> v Bool Expr
+
 print :: [a] -> String | toString a 
 print l = "[" + show l + "]"
 	where
@@ -137,22 +140,27 @@ instance expr Show where
 		show "for " +.+ v +.+ show " in " +.+ s +.+ show " do {"
 		+.+ ident +.+ nl +.+ rest +.+ unident +.+ nl +.+ show "}"
 	(:.) e1 e2 = e1 +.+ show ";" +.+ nl +.+ e2 +.+ nl
-
+	
 instance var Show where
 	(=.) v e = v +.+ show " = " +.+ e
 	var f = freshVar $ \v -> let (x In rest) = f v in
 		show (type x) +.+ show " " +.+ v +.+ show " = " +.+
 		show x +.+ show ";" +.+ nl +.+ rest
 
+instance button Show where
+	isPressed b = show "isPressed " +.+ show b +.+ nl
+	
+
 // -------- Eval --------
 
 :: Eval a p = Eval ((RW a) State -> (Either String a, State))
 :: RW a = R | W a
 :: State = { map :: Map Int Dynamic,
-			 vars :: Int}
+			 vars :: Int,
+			 buttons :: Map Button Bool}
 
 instance zero State where
-	zero = {map = newMap, vars = 0}
+	zero = {map = newMap, vars = 0, buttons = newMap}
 
 unEval :: (Eval a p) -> (RW a) State -> (Either String a, State)
 unEval (Eval f) = f
@@ -221,6 +229,11 @@ instance var Eval where
 						 in rest R {s & vars = inc s.vars,
 									map = put s.vars (dynamic x) s.map}
 
+instance button Eval where
+	isPressed b = Eval \_ s -> case get b s.buttons of
+		Nothing = (Left ("Can't find button " + toString b), s)
+		Just v = (Right v, s)
+
 eval :: (Eval a p) -> [String] | type a
 eval (Eval f) = let (r, s) = f R zero in
 		case r of
@@ -237,6 +250,39 @@ eval (Eval f) = let (r, s) = f R zero in
 		printVar k (v :: [Char]) = "(" + toString k + ":" + print v + ")"
 		printVar k (v :: [Bool]) = "(" + toString k + ":" + print v + ")"
 		printVar k (v :: a) = "unknown type variable"
+
+// -------- MCU --------
+
+:: Button = B1 | B2 | B3 | B4 | B5
+
+instance toString Button where
+	toString B1 = "B1"
+	toString B2 = "B2"
+	toString B3 = "B3"
+	toString B4 = "B4"
+	toString B5 = "B5"
+
+instance < Button where
+	(<) B1 _  = True
+	(<) B2 B1 = False
+	(<) B2 _  = True
+	(<) B3 B1 = False
+	(<) B3 B2 = False
+	(<) B3 _  = True
+	(<) B4 B1 = False
+	(<) B4 B2 = False
+	(<) B4 B3 = False
+	(<) B3 _  = True
+	(<) B5 _  = False
+
+
+// isPressed :: State Button -> Bool
+// isPressed s b = case get b s.buttons of
+// 	Nothing = abort "Button doesn't exist"
+// 	Just v = v
+
+// press :: State Button -> State
+// press s b = let bs = put b True s.buttons in {s & buttons = bs}
 
 test = 
 	var \e = True In
