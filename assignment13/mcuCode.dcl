@@ -22,6 +22,7 @@ import mcu
 instance expr Code 
 instance var Code 
 instance button Code 
+instance lcd Code
 
 instance zero CodeState
 

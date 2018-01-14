@@ -104,6 +104,9 @@ instance button Code where
 	isPressed b = show "isPressed(" +.+ show b +.+ show ")"
 	pressed b = show ""
 
+instance lcd Code where
+	print s = show "lcd.print(\"" +.+ show s +.+ show "\");"
+
 concat :: [String] -> String
 concat [] = ""
 concat [a:as] = a +++ concat as

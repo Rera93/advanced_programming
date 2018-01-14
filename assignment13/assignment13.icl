@@ -18,13 +18,13 @@ test1 =
 	global \p2 = 0 In
 	If (isPressed B1)  
 		(p1 =. p1 +. lit 1)
-		(lit ()) :.
+		(print "button b1 not pressed") :.
 	If (isPressed B2)
 		(p2 =. p2 +. lit 1)
-		(lit ()) :.
+		(print "button b2 not pressed") :.
 	If (isPressed B3)
 		(p1 =. lit 0)
-		(lit ())
+		(print "button b3 not pressed") 
 
 
 writeToFile :: String *Files -> *Files
@@ -38,7 +38,7 @@ writeToFile c files
 
 // C code generation
 
-Start world = appFiles (writeToFile (compile test2)) world
+Start world = appFiles (writeToFile (compile test1)) world
 
 
 // Simulation - not working 

@@ -28,19 +28,19 @@ void loop() {
   if (isPressed(0)) {
     v0 = (v0+1);
   } else {
-    
+    lcd.print("button b1 not pressed");
   }
   
   if (isPressed(1)) {
     v1 = (v1+1);
   } else {
-    
+    lcd.print("button b2 not pressed");
   }
   
   if (isPressed(2)) {
     v0 = 0;
   } else {
-    
+    lcd.print("button b3 not pressed");
   }
   
   

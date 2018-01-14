@@ -43,6 +43,9 @@ class button v where
 	isPressed :: Button -> v Bool Expr
 	pressed :: Button -> v Button Expr
 
+class lcd v where
+	print :: String -> v String Expr
+
 instance toString Button 
 instance == Button
 instance < Button 
