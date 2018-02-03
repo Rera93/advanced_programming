@@ -2,6 +2,7 @@ module question3
 
 import question2
 import iTasks
+import Data.Maybe
 from Data.Func import $
 
 derive class iTask TREE, Gram
